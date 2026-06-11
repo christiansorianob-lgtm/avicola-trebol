@@ -5,6 +5,7 @@ const globalForPrisma = globalThis as unknown as { prisma: PrismaClient }
 // Neon + Vercel integration uses POSTGRES_URL or POSTGRES_PRISMA_URL
 // Local dev uses DATABASE_URL from .env
 const databaseUrl =
+  process.env.DATABASEAVICOLA_DATABASE_URL ||
   process.env.DATABASE_URL ||
   process.env.POSTGRES_PRISMA_URL ||
   process.env.POSTGRES_URL;
