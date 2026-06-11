@@ -23,12 +23,12 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-[#F4F7EF] to-[#E5EAD9] dark:from-[#0F140D] dark:to-[#172114] overflow-hidden">
+    <div className="flex h-screen bg-gradient-to-br from-[#0f172a] to-[#020617] overflow-hidden text-slate-50">
       <Sidebar />
       <main className="flex-1 overflow-y-auto pb-16 md:pb-0 relative">
-        {/* Subtle decorative background circles */}
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/3 pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-secondary/10 rounded-full blur-[120px] translate-y-1/3 -translate-x-1/4 pointer-events-none" />
+        {/* Subtle decorative background glowing orbs in blue tones */}
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/3 pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-indigo-500/10 rounded-full blur-[150px] translate-y-1/3 -translate-x-1/4 pointer-events-none" />
         
         <div className="container max-w-6xl mx-auto p-4 md:p-8 relative z-10">
           {children}
