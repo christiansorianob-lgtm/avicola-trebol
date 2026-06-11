@@ -7,10 +7,10 @@ import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 
 const navigation = [
-  { name: "Dashboard", href: "/", icon: Home },
+  { name: "Inicio", href: "/", icon: Home },
   { name: "Clientes", href: "/clientes", icon: Users },
   { name: "Gastos", href: "/gastos", icon: Receipt },
-  { name: "Producción", href: "/produccion", icon: Box },
+  { name: "Despachos", href: "/produccion", icon: Box },
 ];
 
 export function Sidebar() {

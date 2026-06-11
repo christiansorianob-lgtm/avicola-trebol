@@ -9,7 +9,7 @@ const navigation = [
   { name: "Inicio", href: "/", icon: Home },
   { name: "Clientes", href: "/clientes", icon: Users },
   { name: "Gastos", href: "/gastos", icon: Receipt },
-  { name: "Huevos", href: "/produccion", icon: Box },
+  { name: "Despachos", href: "/produccion", icon: Box },
 ];
 
 export function BottomNav() {

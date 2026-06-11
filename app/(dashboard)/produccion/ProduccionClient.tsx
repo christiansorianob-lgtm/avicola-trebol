@@ -72,19 +72,19 @@ export default function ProduccionClient({ initialBajadas }: { initialBajadas: B
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between gap-4 items-start sm:items-center">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Producción (Bajadas)</h2>
-          <p className="text-muted-foreground">Historial de bajadas de finca por tipo de empaque.</p>
+          <h2 className="text-3xl font-bold tracking-tight">Despachos de Finca</h2>
+          <p className="text-muted-foreground">Historial de despachos recibidos desde la finca.</p>
         </div>
 
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger render={<Button className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90" />}>
             <PlusCircle className="mr-2 h-4 w-4" />
-            Registrar Bajada
+            Registrar Despacho
           </DialogTrigger>
           <DialogContent>
             <form onSubmit={handleSubmit}>
               <DialogHeader>
-                <DialogTitle>Registrar Bajada de Finca</DialogTitle>
+                <DialogTitle>Registrar Despacho de Finca</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -111,14 +111,14 @@ export default function ProduccionClient({ initialBajadas }: { initialBajadas: B
                 </div>
                 <div className="space-y-2">
                   <Label>Notas (opcional)</Label>
-                  <Input value={notas} onChange={e => setNotas(e.target.value)} placeholder="Observaciones de la bajada..." />
+                  <Input value={notas} onChange={e => setNotas(e.target.value)} placeholder="Observaciones del despacho..." />
                 </div>
               </div>
               <DialogFooter>
                 <DialogClose render={<Button variant="outline" type="button" />}>
                   Cancelar
                 </DialogClose>
-                <Button type="submit" disabled={loading || totalCartones === 0}>Guardar Bajada</Button>
+                <Button type="submit" disabled={loading || totalCartones === 0}>Guardar Despacho</Button>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -128,7 +128,7 @@ export default function ProduccionClient({ initialBajadas }: { initialBajadas: B
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {initialBajadas.length === 0 && (
           <div className="col-span-full py-12 text-center text-muted-foreground">
-            No hay bajadas registradas.
+            No hay despachos registrados.
           </div>
         )}
         
