@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, UserCircle } from "lucide-react";
+import { Search, Plus, UserCircle, MessageCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -27,7 +27,9 @@ type ClienteConResumen = {
   saldoPesos: number;
   saldoCartones: number;
   diasSinPagar: number;
+  diasSinMovimiento: number;
   ultimaFecha: string | null;
+  ultimaEntrega: { fecha: string; cantidad: number; clasificacion: string | null } | null;
 };
 
 export default function ClientesClient({ initialData }: { initialData: ClienteConResumen[] }) {
@@ -172,14 +174,43 @@ export default function ClientesClient({ initialData }: { initialData: ClienteCo
                         )}
                       </div>
                     </div>
+                    {cliente.telefono && (
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const cleanPhone = cliente.telefono!.replace(/\D/g, "");
+                          let mensaje = `Hola ${cliente.nombre}, te recordamos que tienes un saldo pendiente de $${Math.max(0, cliente.saldoPesos).toLocaleString("es-CO")} en Avícola El Trébol.`;
+                          if (cliente.ultimaEntrega) {
+                            const clasif = cliente.ultimaEntrega.clasificacion ? ` ${cliente.ultimaEntrega.clasificacion.toLowerCase()}` : "";
+                            mensaje += ` Tu última entrega fue el ${cliente.ultimaEntrega.fecha} (${cliente.ultimaEntrega.cantidad} cartones${clasif}).`;
+                          }
+                          mensaje += ` Gracias por tu confianza!`;
+                          window.open(`https://wa.me/57${cleanPhone}?text=${encodeURIComponent(mensaje)}`, "_blank");
+                        }}
+                        className="text-green-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-950/30 p-2 rounded-full transition-colors flex-shrink-0 ml-2"
+                        title="Enviar recordatorio por WhatsApp"
+                      >
+                        <MessageCircle className="w-5 h-5" />
+                      </button>
+                    )}
                   </div>
                   
-                  {cliente.diasSinPagar > 30 && cliente.saldoPesos > 0 && (
-                    <Badge variant="destructive" className="mb-3">
-                      +{cliente.diasSinPagar} días sin pagar
-                    </Badge>
-                  )}
-                  {cliente.saldoPesos <= 0 && (
+                  {cliente.saldoPesos > 0 ? (
+                    cliente.diasSinMovimiento >= 15 && cliente.diasSinMovimiento <= 30 ? (
+                      <Badge variant="outline" className="mb-3 bg-amber-500/10 text-amber-500 border-amber-500/20 hover:bg-amber-500/20">
+                        Pendiente
+                      </Badge>
+                    ) : cliente.diasSinMovimiento > 30 ? (
+                      <Badge variant="destructive" className="mb-3">
+                        Atrasado
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className="mb-3 bg-primary/10 text-primary hover:bg-primary/20">
+                        Al día
+                      </Badge>
+                    )
+                  ) : (
                     <Badge variant="secondary" className="mb-3 bg-primary/10 text-primary hover:bg-primary/20">
                       Al día
                     </Badge>
@@ -197,6 +228,10 @@ export default function ClientesClient({ initialData }: { initialData: ClienteCo
                       ${Math.max(0, cliente.saldoPesos).toLocaleString("es-CO")}
                     </p>
                   </div>
+                </div>
+                
+                <div className="mt-3 text-xs text-muted-foreground text-center font-medium bg-muted/20 py-1.5 rounded-md">
+                  {cliente.diasSinMovimiento >= 0 ? `Última actividad: hace ${cliente.diasSinMovimiento} ${cliente.diasSinMovimiento === 1 ? 'día' : 'días'}` : "Sin movimientos registrados"}
                 </div>
               </CardContent>
             </Card>

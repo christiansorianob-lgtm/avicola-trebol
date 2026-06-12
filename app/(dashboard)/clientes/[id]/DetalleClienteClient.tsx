@@ -59,7 +59,9 @@ export default function DetalleClienteClient({
   const [openDelete, setOpenDelete] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
   const [openRecibo, setOpenRecibo] = useState(false);
+  const [openConfirmacionEntrega, setOpenConfirmacionEntrega] = useState(false);
   const [lastPagoData, setLastPagoData] = useState<{ monto: number; fecha: string; saldoRestante: number } | null>(null);
+  const [lastEntregaData, setLastEntregaData] = useState<{ cantidad: number, clasificacion: string, precioUnit: number, total: number, fecha: string, saldoTotal: number } | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
@@ -98,6 +100,17 @@ export default function DetalleClienteClient({
     
     setLoading(false);
     setOpenEntrega(false);
+    
+    setLastEntregaData({
+      cantidad: numCartones,
+      clasificacion: ETIQUETAS_CARTON[tipoCarton as TipoCartonType] || tipoCarton,
+      precioUnit: valPrecioUnit,
+      total: numCartones * valPrecioUnit,
+      fecha: format(new Date(fechaEntrega), "dd/MM/yyyy"),
+      saldoTotal: saldoPesos + (numCartones * valPrecioUnit)
+    });
+    setOpenConfirmacionEntrega(true);
+
     setCartones("");
     setPrecioUnit("");
     setNotasEntrega("");
@@ -200,11 +213,18 @@ export default function DetalleClienteClient({
       return;
     }
     const cleanPhone = cliente.telefono.replace(/\D/g, "");
-    const ultimaFecha = movimientos.length > 0
-      ? format(new Date(movimientos[0].fecha), "dd/MM/yyyy", { locale: es })
-      : "N/A";
+    const ultimaEntrega = movimientos.find(m => m.tipo === "ENTREGA");
     const saldo = Math.max(0, saldoPesos).toLocaleString("es-CO");
-    const mensaje = `Hola ${cliente.nombre}, te recordamos que tienes un saldo pendiente de $${saldo} en Avícola El Trébol. Última actividad: ${ultimaFecha}. ¡Gracias!`;
+    let mensaje = `Hola ${cliente.nombre}, te recordamos que tienes un saldo pendiente de $${saldo} en Avícola El Trébol.`;
+    
+    if (ultimaEntrega) {
+      const fechaFmt = format(new Date(ultimaEntrega.fecha), "dd/MM/yyyy", { locale: es });
+      const cantidad = ultimaEntrega.cartones;
+      const clasificacion = ultimaEntrega.tipoCarton ? ETIQUETAS_CARTON[ultimaEntrega.tipoCarton as TipoCartonType] : "";
+      mensaje += ` Tu última entrega fue el ${fechaFmt} (${cantidad} cartones ${clasificacion.toLowerCase()}).`;
+    }
+    
+    mensaje += ` Gracias por tu confianza!`;
     const url = `https://wa.me/57${cleanPhone}?text=${encodeURIComponent(mensaje)}`;
     window.open(url, "_blank");
   };
@@ -470,6 +490,39 @@ export default function DetalleClienteClient({
           <DialogFooter>
             <DialogClose render={<Button variant="outline" />}>No, gracias</DialogClose>
             <Button onClick={() => { generateReciboPDF(); setOpenRecibo(false); }}>Descargar Recibo PDF</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmation Delivery Dialog */}
+      <Dialog open={openConfirmacionEntrega} onOpenChange={setOpenConfirmacionEntrega}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Entrega Registrada Exitosamente</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-2 text-sm">
+            <p>Se registró la entrega de <strong>{lastEntregaData?.cantidad} cartones</strong> a <strong>{cliente.nombre}</strong>.</p>
+            <p className="text-muted-foreground">¿Deseas enviar una confirmación del pedido por WhatsApp?</p>
+          </div>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" />}>No, gracias</DialogClose>
+            <Button 
+              className="bg-green-600 hover:bg-green-700 text-white"
+              onClick={() => {
+                if (!cliente.telefono) {
+                  alert("Este cliente no tiene número de teléfono registrado.");
+                  return;
+                }
+                const cleanPhone = cliente.telefono.replace(/\D/g, "");
+                const d = lastEntregaData;
+                if (!d) return;
+                const mensaje = `Hola ${cliente.nombre}, te confirmamos tu pedido de Avícola El Trébol: ${d.cantidad} cartones ${d.clasificacion.toLowerCase()} ($${d.precioUnit.toLocaleString("es-CO")} c/u) = $${d.total.toLocaleString("es-CO")}. Fecha de entrega: ${d.fecha}. Saldo total pendiente: $${d.saldoTotal.toLocaleString("es-CO")}. Gracias por tu compra!`;
+                window.open(`https://wa.me/57${cleanPhone}?text=${encodeURIComponent(mensaje)}`, "_blank");
+                setOpenConfirmacionEntrega(false);
+              }}
+            >
+              <MessageCircle className="mr-2 h-4 w-4" /> Enviar por WhatsApp
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
