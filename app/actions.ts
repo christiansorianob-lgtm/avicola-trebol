@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { TipoCarton } from "@prisma/client";
 
 export async function crearCliente(data: { nombre: string; telefono?: string; direccion?: string }) {
   try {
@@ -13,12 +14,36 @@ export async function crearCliente(data: { nombre: string; telefono?: string; di
   }
 }
 
+export async function eliminarCliente(id: string) {
+  try {
+    await prisma.cliente.delete({ where: { id } });
+    revalidatePath("/clientes");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "Error al eliminar cliente" };
+  }
+}
+
+export async function editarCliente(id: string, data: { nombre: string; telefono?: string; direccion?: string }) {
+  try {
+    const cliente = await prisma.cliente.update({
+      where: { id },
+      data,
+    });
+    revalidatePath(`/clientes/${id}`);
+    revalidatePath("/clientes");
+    return { success: true, cliente };
+  } catch (error) {
+    return { success: false, error: "Error al editar cliente" };
+  }
+}
+
 export async function registrarMovimiento(data: {
   clienteId: string;
   tipo: "ENTREGA" | "PAGO";
   fecha: Date;
   cartones?: number;
-  tipoCarton?: number;
+  tipoCarton?: TipoCarton;
   precioUnit?: number;
   monto?: number;
   notas?: string;
@@ -52,10 +77,10 @@ export async function registrarGasto(data: {
 
 export async function registrarBajada(data: {
   fecha: Date;
-  cartones13: number;
-  cartones15: number;
-  cartones18: number;
-  cartones20: number;
+  cartonesPequeno: number;
+  cartonesMediano: number;
+  cartonesGrande: number;
+  cartonesJumbo: number;
   notas?: string;
 }) {
   try {

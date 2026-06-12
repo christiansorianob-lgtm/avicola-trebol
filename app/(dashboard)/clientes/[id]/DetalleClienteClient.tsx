@@ -17,9 +17,13 @@ import {
   DialogClose
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, PlusCircle, Banknote, Calendar } from "lucide-react";
+import { ArrowLeft, PlusCircle, Banknote, Calendar, Trash2, Edit, MessageCircle } from "lucide-react";
 import Link from "next/link";
-import { registrarMovimiento } from "@/app/actions";
+import { useRouter } from "next/navigation";
+import { registrarMovimiento, eliminarCliente, editarCliente } from "@/app/actions";
+import { PRECIOS_CARTON, ETIQUETAS_CARTON, TipoCartonType } from "@/lib/config";
+import { TipoCarton } from "@prisma/client";
+import jsPDF from "jspdf";
 
 type Cliente = {
   id: string;
@@ -33,7 +37,7 @@ type Movimiento = {
   tipo: string;
   fecha: Date;
   cartones: number | null;
-  tipoCarton: number | null;
+  tipoCarton: string | null;
   precioUnit: number | null;
   monto: number | null;
   notas: string | null;
@@ -52,17 +56,29 @@ export default function DetalleClienteClient({
 }) {
   const [openEntrega, setOpenEntrega] = useState(false);
   const [openPago, setOpenPago] = useState(false);
+  const [openDelete, setOpenDelete] = useState(false);
+  const [openEdit, setOpenEdit] = useState(false);
+  const [openRecibo, setOpenRecibo] = useState(false);
+  const [lastPagoData, setLastPagoData] = useState<{ monto: number; fecha: string; saldoRestante: number } | null>(null);
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   // Form Entrega
+  const [fechaEntrega, setFechaEntrega] = useState(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
   const [cartones, setCartones] = useState("");
-  const [tipoCarton, setTipoCarton] = useState("30"); // default 30 (aunque el prompt dice 13,15,18,20)
-  const [precioUnit, setPrecioUnit] = useState("");
+  const [tipoCarton, setTipoCarton] = useState<TipoCartonType>("PEQUENO");
+  const [precioUnit, setPrecioUnit] = useState(PRECIOS_CARTON.PEQUENO.toString());
   const [notasEntrega, setNotasEntrega] = useState("");
 
   // Form Pago
+  const [fechaPago, setFechaPago] = useState(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
   const [monto, setMonto] = useState("");
   const [notasPago, setNotasPago] = useState("");
+
+  // Form Edit
+  const [editNombre, setEditNombre] = useState(cliente.nombre);
+  const [editTelefono, setEditTelefono] = useState(cliente.telefono || "");
+  const [editDireccion, setEditDireccion] = useState(cliente.direccion || "");
 
   const handleEntrega = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,9 +89,9 @@ export default function DetalleClienteClient({
     await registrarMovimiento({
       clienteId: cliente.id,
       tipo: "ENTREGA",
-      fecha: new Date(), // TODO: add date picker for custom date
+      fecha: new Date(fechaEntrega),
       cartones: numCartones,
-      tipoCarton: parseInt(tipoCarton),
+      tipoCarton: tipoCarton as TipoCarton,
       precioUnit: valPrecioUnit,
       notas: notasEntrega
     });
@@ -85,24 +101,139 @@ export default function DetalleClienteClient({
     setCartones("");
     setPrecioUnit("");
     setNotasEntrega("");
+    setFechaEntrega(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
   };
 
   const handlePago = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     
+    const montoPagado = parseFloat(monto);
+    const fechaPagoDate = new Date(fechaPago);
+
     await registrarMovimiento({
       clienteId: cliente.id,
       tipo: "PAGO",
-      fecha: new Date(),
-      monto: parseFloat(monto),
+      fecha: fechaPagoDate,
+      monto: montoPagado,
       notas: notasPago
     });
     
     setLoading(false);
     setOpenPago(false);
+
+    // Show receipt dialog
+    setLastPagoData({
+      monto: montoPagado,
+      fecha: format(fechaPagoDate, "dd/MM/yyyy HH:mm"),
+      saldoRestante: Math.max(0, saldoPesos - montoPagado),
+    });
+    setOpenRecibo(true);
+
     setMonto("");
     setNotasPago("");
+    setFechaPago(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
+  };
+
+  const generateReciboPDF = () => {
+    if (!lastPagoData) return;
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // Header
+    doc.setFillColor(34, 139, 34);
+    doc.rect(0, 0, pageWidth, 40, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(22);
+    doc.setFont("helvetica", "bold");
+    doc.text("RECIBO DE PAGO", pageWidth / 2, 18, { align: "center" });
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "normal");
+    doc.text("Avícola El Trébol", pageWidth / 2, 30, { align: "center" });
+
+    // Body
+    doc.setTextColor(0, 0, 0);
+    let y = 60;
+    const leftMargin = 30;
+    const valueX = 100;
+
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("Cliente:", leftMargin, y);
+    doc.setFont("helvetica", "normal");
+    doc.text(cliente.nombre, valueX, y);
+    y += 14;
+
+    doc.setFont("helvetica", "bold");
+    doc.text("Fecha:", leftMargin, y);
+    doc.setFont("helvetica", "normal");
+    doc.text(lastPagoData.fecha, valueX, y);
+    y += 14;
+
+    doc.setFont("helvetica", "bold");
+    doc.text("Monto Pagado:", leftMargin, y);
+    doc.setFont("helvetica", "normal");
+    doc.text(`$${lastPagoData.monto.toLocaleString("es-CO")}`, valueX, y);
+    y += 14;
+
+    doc.setFont("helvetica", "bold");
+    doc.text("Saldo Restante:", leftMargin, y);
+    doc.setFont("helvetica", "normal");
+    doc.text(`$${lastPagoData.saldoRestante.toLocaleString("es-CO")}`, valueX, y);
+    y += 24;
+
+    // Divider
+    doc.setDrawColor(200, 200, 200);
+    doc.line(leftMargin, y, pageWidth - leftMargin, y);
+    y += 14;
+
+    doc.setFontSize(10);
+    doc.setTextColor(120, 120, 120);
+    doc.text("Gracias por su pago. Este documento sirve como comprobante.", pageWidth / 2, y, { align: "center" });
+
+    doc.save(`recibo_${cliente.nombre.replace(/\s+/g, "_")}_${format(new Date(), "yyyyMMdd")}.pdf`);
+  };
+
+  const handleWhatsAppReminder = () => {
+    if (!cliente.telefono) {
+      alert("Este cliente no tiene número de teléfono registrado. Agrega uno para enviar recordatorios.");
+      return;
+    }
+    const cleanPhone = cliente.telefono.replace(/\D/g, "");
+    const ultimaFecha = movimientos.length > 0
+      ? format(new Date(movimientos[0].fecha), "dd/MM/yyyy", { locale: es })
+      : "N/A";
+    const saldo = Math.max(0, saldoPesos).toLocaleString("es-CO");
+    const mensaje = `Hola ${cliente.nombre}, te recordamos que tienes un saldo pendiente de $${saldo} en Avícola El Trébol. Última actividad: ${ultimaFecha}. ¡Gracias!`;
+    const url = `https://wa.me/57${cleanPhone}?text=${encodeURIComponent(mensaje)}`;
+    window.open(url, "_blank");
+  };
+
+  const handleEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    const res = await editarCliente(cliente.id, {
+      nombre: editNombre,
+      telefono: editTelefono,
+      direccion: editDireccion
+    });
+    setLoading(false);
+    if (res.success) {
+      setOpenEdit(false);
+    } else {
+      alert("Error al editar cliente");
+    }
+  };
+
+  const handleDelete = async () => {
+    setLoading(true);
+    const res = await eliminarCliente(cliente.id);
+    if (res.success) {
+      router.push("/clientes");
+    } else {
+      alert("Error al eliminar cliente");
+      setLoading(false);
+    }
   };
 
   let saldoAcumulado = 0;
@@ -118,15 +249,82 @@ export default function DetalleClienteClient({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/clientes">
-          <Button variant="outline" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">{cliente.nombre}</h2>
-          {cliente.telefono && <p className="text-muted-foreground">Tel: {cliente.telefono} {cliente.direccion && `| Dir: ${cliente.direccion}`}</p>}
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <Link href="/clientes">
+            <Button variant="outline" size="icon">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">{cliente.nombre}</h2>
+            {cliente.telefono && <p className="text-muted-foreground">Tel: {cliente.telefono} {cliente.direccion && `| Dir: ${cliente.direccion}`}</p>}
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <Dialog open={openEdit} onOpenChange={setOpenEdit}>
+            <DialogTrigger render={<Button variant="outline" size="icon" className="text-muted-foreground" />}>
+              <Edit className="w-4 h-4" />
+            </DialogTrigger>
+            <DialogContent>
+              <form onSubmit={handleEdit}>
+                <DialogHeader>
+                  <DialogTitle>Editar Cliente</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label>Nombre o Razón Social</Label>
+                    <Input required value={editNombre} onChange={e => setEditNombre(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Teléfono</Label>
+                    <Input value={editTelefono} onChange={e => setEditTelefono(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Dirección</Label>
+                    <Input value={editDireccion} onChange={e => setEditDireccion(e.target.value)} />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <DialogClose render={<Button variant="outline" type="button" />}>Cancelar</DialogClose>
+                  <Button type="submit" disabled={loading}>Guardar Cambios</Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={openDelete} onOpenChange={setOpenDelete}>
+            <DialogTrigger render={<Button variant="destructive" size="sm" className="hidden sm:flex" />}>
+              <Trash2 className="w-4 h-4 mr-2" /> Eliminar
+            </DialogTrigger>
+            {/* For mobile just the icon */}
+            <DialogTrigger render={<Button variant="destructive" size="icon" className="sm:hidden" />}>
+              <Trash2 className="w-4 h-4" />
+            </DialogTrigger>
+            
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>¿Eliminar Cliente?</DialogTitle>
+              </DialogHeader>
+              <div className="py-4">
+                <p className="text-muted-foreground">
+                  Estás a punto de eliminar al cliente <strong className="text-foreground">{cliente.nombre}</strong>.
+                </p>
+                <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-md text-destructive text-sm font-medium">
+                  ⚠️ Advertencia: Esto también eliminará permanentemente <strong>todos sus movimientos asociados</strong> (entregas y pagos). Esta acción no se puede deshacer.
+                </div>
+              </div>
+              <DialogFooter>
+                <DialogClose render={<Button variant="outline" />}>
+                  Cancelar
+                </DialogClose>
+                <Button variant="destructive" disabled={loading} onClick={handleDelete}>
+                  Sí, eliminar todo
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -165,23 +363,31 @@ export default function DetalleClienteClient({
                 <DialogTitle>Registrar Entrega de Huevos</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Fecha de Entrega</Label>
+                  <Input type="datetime-local" required value={fechaEntrega} onChange={e => setFechaEntrega(e.target.value)} />
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Cantidad de cartones</Label>
                     <Input type="number" required value={cartones} onChange={e => setCartones(e.target.value)} min="1" />
                   </div>
                   <div className="space-y-2">
-                    <Label>Tipo (huevos/cartón)</Label>
-                    <Select value={tipoCarton} onValueChange={(val) => setTipoCarton(val || "30")}>
+                    <Label>Tipo de Cartón</Label>
+                    <Select value={tipoCarton} onValueChange={(val) => {
+                      if (!val) return;
+                      const selected = val as TipoCartonType;
+                      setTipoCarton(selected);
+                      setPrecioUnit(PRECIOS_CARTON[selected].toString());
+                    }}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="13">13 huevos</SelectItem>
-                        <SelectItem value="15">15 huevos</SelectItem>
-                        <SelectItem value="18">18 huevos</SelectItem>
-                        <SelectItem value="20">20 huevos</SelectItem>
-                        <SelectItem value="30">30 huevos</SelectItem>
+                        <SelectItem value="PEQUENO">Pequeño — ${PRECIOS_CARTON.PEQUENO.toLocaleString("es-CO")}</SelectItem>
+                        <SelectItem value="MEDIANO">Mediano — ${PRECIOS_CARTON.MEDIANO.toLocaleString("es-CO")}</SelectItem>
+                        <SelectItem value="GRANDE">Grande — ${PRECIOS_CARTON.GRANDE.toLocaleString("es-CO")}</SelectItem>
+                        <SelectItem value="JUMBO">Jumbo — ${PRECIOS_CARTON.JUMBO.toLocaleString("es-CO")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -217,6 +423,10 @@ export default function DetalleClienteClient({
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
+                  <Label>Fecha del Pago</Label>
+                  <Input type="datetime-local" required value={fechaPago} onChange={e => setFechaPago(e.target.value)} />
+                </div>
+                <div className="space-y-2">
                   <Label>Monto Pagado ($)</Label>
                   <Input type="number" required value={monto} onChange={e => setMonto(e.target.value)} min="1" />
                 </div>
@@ -236,7 +446,33 @@ export default function DetalleClienteClient({
             </form>
           </DialogContent>
         </Dialog>
+
+        {/* WhatsApp Reminder */}
+        <Button
+          className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+          size="lg"
+          onClick={handleWhatsAppReminder}
+        >
+          <MessageCircle className="mr-2 h-5 w-5" /> Recordar por WhatsApp
+        </Button>
       </div>
+
+      {/* Receipt Dialog */}
+      <Dialog open={openRecibo} onOpenChange={setOpenRecibo}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Pago Registrado Exitosamente</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-2 text-sm">
+            <p>Se registró un pago de <strong>${lastPagoData?.monto.toLocaleString("es-CO")}</strong> para <strong>{cliente.nombre}</strong>.</p>
+            <p className="text-muted-foreground">¿Deseas descargar un recibo en PDF?</p>
+          </div>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" />}>No, gracias</DialogClose>
+            <Button onClick={() => { generateReciboPDF(); setOpenRecibo(false); }}>Descargar Recibo PDF</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Card>
         <CardHeader>
@@ -277,7 +513,7 @@ export default function DetalleClienteClient({
                     </td>
                     <td className="px-4 py-3">
                       {m.tipo === "ENTREGA" ? (
-                        <span>{m.cartones} cartones de {m.tipoCarton}</span>
+                        <span>{m.cartones} cartones {m.tipoCarton ? ETIQUETAS_CARTON[m.tipoCarton as TipoCartonType] : ''}</span>
                       ) : (
                         <span>Abono/Pago</span>
                       )}

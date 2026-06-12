@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Users, Receipt, Box } from "lucide-react";
+import { Home, Users, Receipt, Box, LogOut } from "lucide-react";
+import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
+import { ThemeToggle } from "./ThemeToggle";
 
 const navigation = [
   { name: "Inicio", href: "/", icon: Home },
@@ -33,6 +35,14 @@ export function BottomNav() {
           </Link>
         );
       })}
+      <ThemeToggle variant="mobile" />
+      <button
+        onClick={() => signOut()}
+        className="flex flex-col items-center justify-center w-full h-full space-y-1 text-muted-foreground hover:text-red-500 transition-colors"
+      >
+        <LogOut className="w-5 h-5" />
+        <span className="text-[10px]">Salir</span>
+      </button>
     </nav>
   );
 }

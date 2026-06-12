@@ -16,18 +16,25 @@ model Cliente {
   movimientos Movimiento[]
 }
 
+enum TipoCarton {
+  PEQUENO
+  MEDIANO
+  GRANDE
+  JUMBO
+}
+
 model Movimiento {
-  id         String   @id @default(cuid())
+  id         String      @id @default(cuid())
   clienteId  String
-  cliente    Cliente  @relation(fields: [clienteId], references: [id])
+  cliente    Cliente     @relation(fields: [clienteId], references: [id], onDelete: Cascade)
   tipo       String // "ENTREGA" | "PAGO"
   fecha      DateTime
   cartones   Int?
-  tipoCarton Int? // 13, 15, 18, 20
+  tipoCarton TipoCarton?
   precioUnit Float?
   monto      Float?
   notas      String?
-  createdAt  DateTime @default(now())
+  createdAt  DateTime    @default(now())
 }
 
 model Gasto {
@@ -40,12 +47,12 @@ model Gasto {
 }
 
 model Bajada {
-  id         String   @id @default(cuid())
-  fecha      DateTime
-  cartones13 Int      @default(0)
-  cartones15 Int      @default(0)
-  cartones18 Int      @default(0)
-  cartones20 Int      @default(0)
-  notas      String?
-  createdAt  DateTime @default(now())
+  id              String   @id @default(cuid())
+  fecha           DateTime
+  cartonesPequeno Int      @default(0)
+  cartonesMediano Int      @default(0)
+  cartonesGrande  Int      @default(0)
+  cartonesJumbo   Int      @default(0)
+  notas           String?
+  createdAt       DateTime @default(now())
 }

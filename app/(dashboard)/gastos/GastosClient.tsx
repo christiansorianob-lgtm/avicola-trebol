@@ -17,17 +17,16 @@ import {
   DialogClose
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle, Calendar as CalendarIcon, Filter } from "lucide-react";
+import { PlusCircle, Calendar as CalendarIcon, Filter, Settings, Trash2, Plus } from "lucide-react";
 import { registrarGasto } from "@/app/actions";
 
-const CATEGORIAS = [
+const CATEGORIAS_DEFAULT = [
   "Concentrado",
   "Calcio",
   "Vacunas",
   "Vitaminas",
   "Cartones (empaques)",
   "Mensualidad empleada (pesaje de huevos)",
-  "Otros"
 ];
 
 type Gasto = {
@@ -40,19 +39,54 @@ type Gasto = {
 
 export default function GastosClient({ initialGastos }: { initialGastos: Gasto[] }) {
   const [open, setOpen] = useState(false);
+  const [openAdmin, setOpenAdmin] = useState(false);
   const [loading, setLoading] = useState(false);
   const [mesFiltro, setMesFiltro] = useState<string>(format(new Date(), "yyyy-MM"));
+  const [nuevaCategoria, setNuevaCategoria] = useState("");
+
+  // Load custom categories from localStorage
+  const [categorias, setCategorias] = useState<string[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("avicola_categorias_gasto");
+      if (saved) return JSON.parse(saved);
+    }
+    return CATEGORIAS_DEFAULT;
+  });
 
   // Form
+  const [fecha, setFecha] = useState(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
   const [monto, setMonto] = useState("");
-  const [categoria, setCategoria] = useState(CATEGORIAS[0]);
+  const [categoria, setCategoria] = useState(categorias[0]);
   const [descripcion, setDescripcion] = useState("");
+
+  const saveCategorias = (newCats: string[]) => {
+    setCategorias(newCats);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("avicola_categorias_gasto", JSON.stringify(newCats));
+    }
+  };
+
+  const handleAddCategoria = () => {
+    const trimmed = nuevaCategoria.trim();
+    if (trimmed && !categorias.includes(trimmed)) {
+      saveCategorias([...categorias, trimmed]);
+      setNuevaCategoria("");
+    }
+  };
+
+  const handleRemoveCategoria = (cat: string) => {
+    const updated = categorias.filter(c => c !== cat);
+    saveCategorias(updated);
+    if (categoria === cat && updated.length > 0) {
+      setCategoria(updated[0]);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     const res = await registrarGasto({
-      fecha: new Date(),
+      fecha: new Date(fecha),
       categoria,
       descripcion,
       monto: parseFloat(monto)
@@ -62,6 +96,7 @@ export default function GastosClient({ initialGastos }: { initialGastos: Gasto[]
       setOpen(false);
       setMonto("");
       setDescripcion("");
+      setFecha(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
     }
   };
 
@@ -93,17 +128,32 @@ export default function GastosClient({ initialGastos }: { initialGastos: Gasto[]
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
+                  <Label>Fecha del Gasto</Label>
+                  <Input type="datetime-local" required value={fecha} onChange={e => setFecha(e.target.value)} />
+                </div>
+                <div className="space-y-2">
                   <Label>Monto ($)</Label>
                   <Input type="number" required value={monto} onChange={e => setMonto(e.target.value)} min="1" />
                 </div>
                 <div className="space-y-2">
-                  <Label>Categoría</Label>
-                  <Select value={categoria} onValueChange={(val) => setCategoria(val || CATEGORIAS[0])}>
+                  <div className="flex items-center justify-between">
+                    <Label>Categoría</Label>
+                    <button
+                      type="button"
+                      onClick={() => setOpenAdmin(true)}
+                      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+                      title="Administrar categorías"
+                    >
+                      <Settings className="w-3.5 h-3.5" />
+                      Administrar
+                    </button>
+                  </div>
+                  <Select value={categoria} onValueChange={(val) => setCategoria(val || categorias[0])}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {CATEGORIAS.map(cat => (
+                      {categorias.map(cat => (
                         <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                       ))}
                     </SelectContent>
@@ -124,6 +174,48 @@ export default function GastosClient({ initialGastos }: { initialGastos: Gasto[]
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Admin Categories Dialog */}
+      <Dialog open={openAdmin} onOpenChange={setOpenAdmin}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Administrar Categorías</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="flex gap-2">
+              <Input
+                placeholder="Nueva categoría..."
+                value={nuevaCategoria}
+                onChange={e => setNuevaCategoria(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleAddCategoria(); } }}
+              />
+              <Button type="button" size="sm" onClick={handleAddCategoria} disabled={!nuevaCategoria.trim()}>
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
+            <div className="space-y-1 max-h-60 overflow-y-auto">
+              {categorias.map(cat => (
+                <div key={cat} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-muted/50 transition-colors">
+                  <span className="text-sm">{cat}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveCategoria(cat)}
+                    className="text-muted-foreground hover:text-destructive transition-colors p-1"
+                    title="Eliminar categoría"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" type="button" />}>
+              Cerrar
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="flex flex-col sm:flex-row gap-4 items-center bg-white dark:bg-card p-4 rounded-lg shadow-sm border border-border">
         <div className="flex items-center gap-2 w-full sm:w-auto">

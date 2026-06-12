@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { crearCliente } from "@/app/actions";
+import ExportarCartera from "./ExportarCartera";
 
 type ClienteConResumen = {
   id: string;
@@ -26,6 +27,7 @@ type ClienteConResumen = {
   saldoPesos: number;
   saldoCartones: number;
   diasSinPagar: number;
+  ultimaFecha: string | null;
 };
 
 export default function ClientesClient({ initialData }: { initialData: ClienteConResumen[] }) {
@@ -69,11 +71,18 @@ export default function ClientesClient({ initialData }: { initialData: ClienteCo
           <p className="text-muted-foreground">Gestiona tus clientes y sus saldos pendientes.</p>
         </div>
 
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger render={<Button className="w-full sm:w-auto" />}>
-            <Plus className="mr-2 h-4 w-4" />
-            Nuevo Cliente
-          </DialogTrigger>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <ExportarCartera clientes={initialData.map(c => ({
+            nombre: c.nombre,
+            telefono: c.telefono,
+            saldoPesos: c.saldoPesos,
+            ultimaFecha: c.ultimaFecha,
+          }))} />
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger render={<Button className="w-full sm:w-auto" />}>
+              <Plus className="mr-2 h-4 w-4" />
+              Nuevo Cliente
+            </DialogTrigger>
           <DialogContent>
             <form onSubmit={handleCreate}>
               <DialogHeader>
@@ -98,6 +107,7 @@ export default function ClientesClient({ initialData }: { initialData: ClienteCo
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4 items-center bg-white dark:bg-card p-4 rounded-lg shadow-sm border border-border">

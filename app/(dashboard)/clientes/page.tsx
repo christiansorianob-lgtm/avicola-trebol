@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import ClientesClient from "./ClientesClient";
 
 export default async function ClientesPage() {
-  let data: { id: string; nombre: string; telefono: string | null; saldoPesos: number; saldoCartones: number; diasSinPagar: number }[] = [];
+  let data: { id: string; nombre: string; telefono: string | null; saldoPesos: number; saldoCartones: number; diasSinPagar: number; ultimaFecha: string | null }[] = [];
 
   try {
     const dbClientes = await prisma.cliente.findMany({
@@ -43,7 +43,11 @@ export default async function ClientesPage() {
         }
       }
 
-      return { id: c.id, nombre: c.nombre, telefono: c.telefono, saldoPesos, saldoCartones: cartonesPendientes, diasSinPagar };
+      const ultimaFecha = c.movimientos.length > 0
+        ? c.movimientos[0].fecha.toISOString().slice(0, 10).split("-").reverse().join("/")
+        : null;
+
+      return { id: c.id, nombre: c.nombre, telefono: c.telefono, saldoPesos, saldoCartones: cartonesPendientes, diasSinPagar, ultimaFecha };
     });
   } catch (error) {
     console.error("Database error on /clientes:", error);

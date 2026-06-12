@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { format } from "date-fns";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,31 +15,64 @@ import {
   DialogFooter,
   DialogClose
 } from "@/components/ui/dialog";
-import { PlusCircle, Calendar as CalendarIcon, PackageOpen } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { PlusCircle, PackageOpen, Layers, Activity } from "lucide-react";
 import { registrarBajada } from "@/app/actions";
 
 type Bajada = {
   id: string;
   fecha: Date;
-  cartones13: number;
-  cartones15: number;
-  cartones18: number;
-  cartones20: number;
+  cartonesPequeno: number;
+  cartonesMediano: number;
+  cartonesGrande: number;
+  cartonesJumbo: number;
   notas: string | null;
 };
 
-export default function ProduccionClient({ initialBajadas }: { initialBajadas: Bajada[] }) {
+type Inventario = {
+  pequeno: number;
+  mediano: number;
+  grande: number;
+  jumbo: number;
+};
+
+type MermaMes = {
+  pequeno: number;
+  mediano: number;
+  grande: number;
+  jumbo: number;
+  totalEntradas: number;
+  totalSalidas: number;
+};
+
+export default function ProduccionClient({ 
+  initialBajadas,
+  inventario,
+  mermaMes
+}: { 
+  initialBajadas: Bajada[],
+  inventario: Inventario,
+  mermaMes: MermaMes
+}) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
   // Form
-  const [c13, setC13] = useState(0);
-  const [c15, setC15] = useState(0);
-  const [c18, setC18] = useState(0);
-  const [c20, setC20] = useState(0);
+  const [fecha, setFecha] = useState(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
+  const [cPequeno, setCPequeno] = useState(0);
+  const [cMediano, setCMediano] = useState(0);
+  const [cGrande, setCGrande] = useState(0);
+  const [cJumbo, setCJumbo] = useState(0);
   const [notas, setNotas] = useState("");
 
-  const totalCartones = c13 + c15 + c18 + c20;
+  const totalCartones = cPequeno + cMediano + cGrande + cJumbo;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,21 +83,22 @@ export default function ProduccionClient({ initialBajadas }: { initialBajadas: B
     
     setLoading(true);
     const res = await registrarBajada({
-      fecha: new Date(),
-      cartones13: c13,
-      cartones15: c15,
-      cartones18: c18,
-      cartones20: c20,
+      fecha: new Date(fecha),
+      cartonesPequeno: cPequeno,
+      cartonesMediano: cMediano,
+      cartonesGrande: cGrande,
+      cartonesJumbo: cJumbo,
       notas
     });
     setLoading(false);
     if (res.success) {
       setOpen(false);
-      setC13(0);
-      setC15(0);
-      setC18(0);
-      setC20(0);
+      setCPequeno(0);
+      setCMediano(0);
+      setCGrande(0);
+      setCJumbo(0);
       setNotas("");
+      setFecha(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
     }
   };
 
@@ -72,8 +106,8 @@ export default function ProduccionClient({ initialBajadas }: { initialBajadas: B
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between gap-4 items-start sm:items-center">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Despachos de Finca</h2>
-          <p className="text-muted-foreground">Historial de despachos recibidos desde la finca.</p>
+          <h2 className="text-3xl font-bold tracking-tight">Despachos e Inventario</h2>
+          <p className="text-muted-foreground">Control de stock de cartones y recepciones desde la finca.</p>
         </div>
 
         <Dialog open={open} onOpenChange={setOpen}>
@@ -87,22 +121,26 @@ export default function ProduccionClient({ initialBajadas }: { initialBajadas: B
                 <DialogTitle>Registrar Despacho de Finca</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Fecha del Despacho</Label>
+                  <Input type="datetime-local" required value={fecha} onChange={e => setFecha(e.target.value)} />
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Cartones de 13</Label>
-                    <Input type="number" value={c13 || ''} onChange={e => setC13(parseInt(e.target.value) || 0)} min="0" />
+                    <Label>Pequeño (50-55gr)</Label>
+                    <Input type="number" value={cPequeno || ''} onChange={e => setCPequeno(parseInt(e.target.value) || 0)} min="0" />
                   </div>
                   <div className="space-y-2">
-                    <Label>Cartones de 15</Label>
-                    <Input type="number" value={c15 || ''} onChange={e => setC15(parseInt(e.target.value) || 0)} min="0" />
+                    <Label>Mediano (56-61gr)</Label>
+                    <Input type="number" value={cMediano || ''} onChange={e => setCMediano(parseInt(e.target.value) || 0)} min="0" />
                   </div>
                   <div className="space-y-2">
-                    <Label>Cartones de 18</Label>
-                    <Input type="number" value={c18 || ''} onChange={e => setC18(parseInt(e.target.value) || 0)} min="0" />
+                    <Label>Grande (62-67gr)</Label>
+                    <Input type="number" value={cGrande || ''} onChange={e => setCGrande(parseInt(e.target.value) || 0)} min="0" />
                   </div>
                   <div className="space-y-2">
-                    <Label>Cartones de 20</Label>
-                    <Input type="number" value={c20 || ''} onChange={e => setC20(parseInt(e.target.value) || 0)} min="0" />
+                    <Label>Jumbo (68-90gr)</Label>
+                    <Input type="number" value={cJumbo || ''} onChange={e => setCJumbo(parseInt(e.target.value) || 0)} min="0" />
                   </div>
                 </div>
                 <div className="pt-2 pb-1 border-t border-b border-border flex justify-between items-center bg-muted/50 px-3 rounded-md">
@@ -125,57 +163,136 @@ export default function ProduccionClient({ initialBajadas }: { initialBajadas: B
         </Dialog>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {initialBajadas.length === 0 && (
-          <div className="col-span-full py-12 text-center text-muted-foreground">
-            No hay despachos registrados.
-          </div>
-        )}
-        
-        {initialBajadas.map(bajada => {
-          const total = bajada.cartones13 + bajada.cartones15 + bajada.cartones18 + bajada.cartones20;
-          return (
-            <Card key={bajada.id} className="shadow-sm border-border">
-              <CardContent className="p-5">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <CalendarIcon className="w-4 h-4" />
-                    <span className="font-medium text-foreground">{format(new Date(bajada.fecha), "dd/MM/yyyy HH:mm")}</span>
-                  </div>
-                  <div className="bg-primary/10 text-primary px-2 py-1 rounded font-bold flex items-center gap-1 text-sm">
-                    <PackageOpen className="w-4 h-4" /> {total}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-4 gap-2 mb-3">
-                  <div className="bg-muted/50 text-center p-2 rounded">
-                    <p className="text-[10px] text-muted-foreground uppercase">x13</p>
-                    <p className="font-semibold">{bajada.cartones13}</p>
-                  </div>
-                  <div className="bg-muted/50 text-center p-2 rounded">
-                    <p className="text-[10px] text-muted-foreground uppercase">x15</p>
-                    <p className="font-semibold">{bajada.cartones15}</p>
-                  </div>
-                  <div className="bg-muted/50 text-center p-2 rounded">
-                    <p className="text-[10px] text-muted-foreground uppercase">x18</p>
-                    <p className="font-semibold">{bajada.cartones18}</p>
-                  </div>
-                  <div className="bg-muted/50 text-center p-2 rounded">
-                    <p className="text-[10px] text-muted-foreground uppercase">x20</p>
-                    <p className="font-semibold">{bajada.cartones20}</p>
-                  </div>
-                </div>
-
-                {bajada.notas && (
-                  <p className="text-xs text-muted-foreground bg-accent/5 p-2 rounded border border-accent/20">
-                    <span className="font-medium mr-1 text-accent-foreground/80">Nota:</span> {bajada.notas}
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
+      {/* INVENTARIO ACTUAL */}
+      <div>
+        <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+          <Layers className="w-5 h-5 text-primary" />
+          Inventario Actual
+        </h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card className="bg-primary/5 border-primary/20">
+            <CardHeader className="pb-2 pt-4">
+              <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Pequeño</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-foreground">{inventario.pequeno}</div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-primary/5 border-primary/20">
+            <CardHeader className="pb-2 pt-4">
+              <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Mediano</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-foreground">{inventario.mediano}</div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-primary/5 border-primary/20">
+            <CardHeader className="pb-2 pt-4">
+              <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Grande</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-foreground">{inventario.grande}</div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-primary/5 border-primary/20">
+            <CardHeader className="pb-2 pt-4">
+              <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Jumbo</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-foreground">{inventario.jumbo}</div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
+
+      {/* ANÁLISIS DE MERMAS (ESTE MES) */}
+      <Card className="border-t-4 border-t-amber-500 shadow-sm">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Activity className="w-5 h-5 text-amber-500" />
+            Análisis de Mermas / Faltantes (Este Mes)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 gap-4 text-center mt-4 mb-2">
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Total Despachado (Finca)</p>
+              <p className="text-2xl font-bold text-primary">{mermaMes.totalEntradas}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Total Entregado (Clientes)</p>
+              <p className="text-2xl font-bold text-secondary-foreground">{mermaMes.totalSalidas}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Diferencia (Inventario/Merma)</p>
+              <p className={`text-2xl font-bold ${mermaMes.totalEntradas - mermaMes.totalSalidas < 0 ? 'text-destructive' : 'text-foreground'}`}>
+                {mermaMes.totalEntradas - mermaMes.totalSalidas}
+              </p>
+            </div>
+          </div>
+          <div className="text-xs text-muted-foreground text-center mt-4">
+            Comparativa del mes actual para detectar posibles pérdidas, daños de cartones o faltantes en ruta.
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* HISTORIAL DE DESPACHOS */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <PackageOpen className="w-5 h-5 text-muted-foreground" />
+            Historial de Recepciones
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0 sm:p-6">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[180px]">Fecha</TableHead>
+                  <TableHead className="text-center">Pequeño</TableHead>
+                  <TableHead className="text-center">Mediano</TableHead>
+                  <TableHead className="text-center">Grande</TableHead>
+                  <TableHead className="text-center">Jumbo</TableHead>
+                  <TableHead className="text-center font-bold">Total</TableHead>
+                  <TableHead className="min-w-[200px]">Notas</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {initialBajadas.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      No hay despachos registrados.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  initialBajadas.map((bajada) => {
+                    const total = bajada.cartonesPequeno + bajada.cartonesMediano + bajada.cartonesGrande + bajada.cartonesJumbo;
+                    return (
+                      <TableRow key={bajada.id}>
+                        <TableCell className="font-medium whitespace-nowrap">
+                          {format(new Date(bajada.fecha), "dd/MM/yyyy HH:mm")}
+                        </TableCell>
+                        <TableCell className="text-center">{bajada.cartonesPequeno}</TableCell>
+                        <TableCell className="text-center">{bajada.cartonesMediano}</TableCell>
+                        <TableCell className="text-center">{bajada.cartonesGrande}</TableCell>
+                        <TableCell className="text-center">{bajada.cartonesJumbo}</TableCell>
+                        <TableCell className="text-center font-bold text-primary">{total}</TableCell>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {bajada.notas || "-"}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
