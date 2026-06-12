@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import ClientesClient from "./ClientesClient";
+import { Suspense } from "react";
 
 export default async function ClientesPage() {
   let data: { id: string; nombre: string; telefono: string | null; saldoPesos: number; saldoCartones: number; diasSinPagar: number; diasSinMovimiento: number; ultimaFecha: string | null; ultimaEntrega: { fecha: string; cantidad: number; clasificacion: string | null } | null }[] = [];
@@ -65,5 +66,9 @@ export default async function ClientesPage() {
     console.error("Database error on /clientes:", error);
   }
 
-  return <ClientesClient initialData={data} />;
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-muted-foreground animate-pulse">Cargando clientes...</div>}>
+      <ClientesClient initialData={data} />
+    </Suspense>
+  );
 }

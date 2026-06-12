@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -33,8 +34,25 @@ type ClienteConResumen = {
 };
 
 export default function ClientesClient({ initialData }: { initialData: ClienteConResumen[] }) {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  
+  const initialFilterParam = searchParams.get("filter") as any;
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<"todos" | "con-deuda" | "sin-deuda" | "al-dia" | "pendiente" | "atrasado">("todos");
+  const [filter, setFilter] = useState<"todos" | "con-deuda" | "sin-deuda" | "al-dia" | "pendiente" | "atrasado" | "top-deuda" | "top-viejas">(
+    initialFilterParam && ["todos", "con-deuda", "sin-deuda", "al-dia", "pendiente", "atrasado", "top-deuda", "top-viejas"].includes(initialFilterParam) 
+      ? initialFilterParam 
+      : "todos"
+  );
+
+  // Update URL when filter changes
+  useEffect(() => {
+    if (filter === "todos") {
+      router.replace("/clientes");
+    } else {
+      router.replace(`/clientes?filter=${filter}`);
+    }
+  }, [filter, router]);
   
   // Create client state
   const [open, setOpen] = useState(false);
@@ -42,7 +60,14 @@ export default function ClientesClient({ initialData }: { initialData: ClienteCo
   const [telefono, setTelefono] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const filtered = initialData.filter((c) => {
+  let processedData = [...initialData];
+  if (filter === "top-deuda") {
+    processedData = processedData.filter(c => c.saldoPesos > 0).sort((a,b) => b.saldoPesos - a.saldoPesos).slice(0, 5);
+  } else if (filter === "top-viejas") {
+    processedData = processedData.filter(c => c.saldoPesos > 0).sort((a,b) => b.diasSinMovimiento - a.diasSinMovimiento).slice(0, 5);
+  }
+
+  const filtered = processedData.filter((c) => {
     const matchName = c.nombre.toLowerCase().includes(search.toLowerCase());
     if (!matchName) return false;
     
@@ -168,6 +193,21 @@ export default function ClientesClient({ initialData }: { initialData: ClienteCo
             className={`whitespace-nowrap ${filter === "atrasado" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : "text-destructive border-destructive/30 hover:bg-destructive/10"}`}
           >
             Atrasado
+          </Button>
+          <div className="w-px h-6 bg-border mx-1 my-auto hidden sm:block shrink-0" />
+          <Button 
+            variant={filter === "top-deuda" ? "default" : "outline"} 
+            onClick={() => setFilter("top-deuda")}
+            className="whitespace-nowrap"
+          >
+            Top Mayor Deuda
+          </Button>
+          <Button 
+            variant={filter === "top-viejas" ? "default" : "outline"} 
+            onClick={() => setFilter("top-viejas")}
+            className="whitespace-nowrap"
+          >
+            Top Deudas Viejas
           </Button>
         </div>
       </div>

@@ -19,7 +19,6 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { ETIQUETAS_CARTON, TipoCartonType } from "@/lib/config";
 import { cn } from "@/lib/utils";
-import DashboardClient, { type ChartDataPoint } from "./DashboardClient";
 
 // ───── Trend indicator helper ─────
 function TrendBadge({ current, previous }: { current: number; previous: number }) {
@@ -77,7 +76,6 @@ export default async function DashboardPage() {
 
   let topDeudores: { id: string; nombre: string; deuda: number }[] = [];
   let topDeudasViejas: { id: string; nombre: string; deuda: number; diasSinMovimiento: number }[] = [];
-  let chartData: ChartDataPoint[] = [];
 
   try {
     // ── Current-month aggregates ──
@@ -176,34 +174,6 @@ export default async function DashboardPage() {
     topDeudores = deudoresMap.sort((a, b) => b.deuda - a.deuda).slice(0, 5);
     topDeudasViejas = deudasViejasMap.sort((a, b) => b.diasSinMovimiento - a.diasSinMovimiento).slice(0, 5);
 
-    // ── Chart: income per month for last 6 months ──
-    const monthBuckets: ChartDataPoint[] = [];
-    const monthIndexMap = new Map<string, number>();
-
-    for (let i = 5; i >= 0; i--) {
-      const mDate = new Date(currentYear, currentMonth - i, 1);
-      const label = format(mDate, "MMM yy", { locale: es });
-      const key = `${mDate.getFullYear()}-${mDate.getMonth()}`;
-      monthIndexMap.set(key, monthBuckets.length);
-      monthBuckets.push({ month: label, ingresos: 0 });
-    }
-
-    // Batch query: all payments in the 6-month window
-    const sixMonthStart = new Date(currentYear, currentMonth - 5, 1);
-    const allPayments = await prisma.movimiento.findMany({
-      where: { tipo: "PAGO", fecha: { gte: sixMonthStart, lte: endOfMonth } },
-      select: { fecha: true, monto: true },
-    });
-
-    allPayments.forEach((p) => {
-      const key = `${p.fecha.getFullYear()}-${p.fecha.getMonth()}`;
-      const idx = monthIndexMap.get(key);
-      if (idx !== undefined) {
-        monthBuckets[idx].ingresos += p.monto || 0;
-      }
-    });
-
-    chartData = monthBuckets;
   } catch (error) {
     dbConnected = false;
     console.error("Database connection error:", error);
@@ -360,8 +330,8 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
-      {/* ── Second row: Desglose + Top Deudores + Chart ── */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {/* ── Second row: Desglose + Top Deudores ── */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {/* Desglose Cartones */}
         <Card className="shadow-sm">
           <CardHeader>
@@ -389,14 +359,17 @@ export default async function DashboardPage() {
         </Card>
 
         {/* Top 5 Clientes con Mayor Deuda */}
-        <Card className="shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Crown className="h-5 w-5 text-amber-500" />
-              Top 5 Mayor Deuda
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+        <Card className="shadow-sm flex flex-col">
+          <Link href="/clientes?filter=top-deuda" className="hover:opacity-80 transition-opacity">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Crown className="h-5 w-5 text-amber-500" />
+                Top 5 Mayor Deuda
+                <span className="ml-auto text-xs font-normal text-muted-foreground underline">Ver filtro &rarr;</span>
+              </CardTitle>
+            </CardHeader>
+          </Link>
+          <CardContent className="flex-1">
             {topDeudores.length === 0 ? (
               <p className="text-sm text-muted-foreground">No hay clientes con deuda.</p>
             ) : (
@@ -426,14 +399,17 @@ export default async function DashboardPage() {
         </Card>
 
         {/* Top 5 Deudas Más Viejas */}
-        <Card className="shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
-              Top 5 Deudas Más Viejas
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+        <Card className="shadow-sm flex flex-col">
+          <Link href="/clientes?filter=top-viejas" className="hover:opacity-80 transition-opacity">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+                Top 5 Deudas Viejas
+                <span className="ml-auto text-xs font-normal text-muted-foreground underline">Ver filtro &rarr;</span>
+              </CardTitle>
+            </CardHeader>
+          </Link>
+          <CardContent className="flex-1">
             {topDeudasViejas.length === 0 ? (
               <p className="text-sm text-muted-foreground">No hay clientes con deudas viejas.</p>
             ) : (
@@ -463,23 +439,6 @@ export default async function DashboardPage() {
                   </Link>
                 ))}
               </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Income Chart - Last 6 months */}
-        <Card className="shadow-sm md:col-span-2 lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-muted-foreground" />
-              Ingresos (Últimos 6 Meses)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {chartData.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Sin datos disponibles.</p>
-            ) : (
-              <DashboardClient chartData={chartData} />
             )}
           </CardContent>
         </Card>
