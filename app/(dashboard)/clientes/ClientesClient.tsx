@@ -34,7 +34,7 @@ type ClienteConResumen = {
 
 export default function ClientesClient({ initialData }: { initialData: ClienteConResumen[] }) {
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<"todos" | "con-deuda" | "al-dia">("todos");
+  const [filter, setFilter] = useState<"todos" | "con-deuda" | "sin-deuda" | "al-dia" | "pendiente" | "atrasado">("todos");
   
   // Create client state
   const [open, setOpen] = useState(false);
@@ -47,7 +47,10 @@ export default function ClientesClient({ initialData }: { initialData: ClienteCo
     if (!matchName) return false;
     
     if (filter === "con-deuda") return c.saldoPesos > 0;
-    if (filter === "al-dia") return c.saldoPesos <= 0;
+    if (filter === "sin-deuda") return c.saldoPesos <= 0;
+    if (filter === "al-dia") return c.saldoPesos <= 0 || (c.saldoPesos > 0 && c.diasSinMovimiento < 15);
+    if (filter === "pendiente") return c.saldoPesos > 0 && c.diasSinMovimiento >= 15 && c.diasSinMovimiento <= 30;
+    if (filter === "atrasado") return c.saldoPesos > 0 && c.diasSinMovimiento > 30;
     return true;
   });
 
@@ -138,11 +141,33 @@ export default function ClientesClient({ initialData }: { initialData: ClienteCo
             Con Deuda
           </Button>
           <Button 
-            variant={filter === "al-dia" ? "default" : "outline"} 
-            onClick={() => setFilter("al-dia")}
+            variant={filter === "sin-deuda" ? "default" : "outline"} 
+            onClick={() => setFilter("sin-deuda")}
             className="whitespace-nowrap"
           >
+            Sin Deuda
+          </Button>
+          <div className="w-px h-6 bg-border mx-1 my-auto hidden sm:block shrink-0" />
+          <Button 
+            variant={filter === "al-dia" ? "default" : "outline"} 
+            onClick={() => setFilter("al-dia")}
+            className={`whitespace-nowrap ${filter === "al-dia" ? "bg-primary hover:bg-primary/90" : "text-primary border-primary/30 hover:bg-primary/10"}`}
+          >
             Al Día
+          </Button>
+          <Button 
+            variant={filter === "pendiente" ? "default" : "outline"} 
+            onClick={() => setFilter("pendiente")}
+            className={`whitespace-nowrap ${filter === "pendiente" ? "bg-amber-500 text-white hover:bg-amber-600" : "text-amber-600 border-amber-200 hover:bg-amber-50"}`}
+          >
+            Pendiente
+          </Button>
+          <Button 
+            variant={filter === "atrasado" ? "default" : "outline"} 
+            onClick={() => setFilter("atrasado")}
+            className={`whitespace-nowrap ${filter === "atrasado" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : "text-destructive border-destructive/30 hover:bg-destructive/10"}`}
+          >
+            Atrasado
           </Button>
         </div>
       </div>

@@ -76,6 +76,7 @@ export default async function DashboardPage() {
   let cartonesPrev = 0;
 
   let topDeudores: { id: string; nombre: string; deuda: number }[] = [];
+  let topDeudasViejas: { id: string; nombre: string; deuda: number; diasSinMovimiento: number }[] = [];
   let chartData: ChartDataPoint[] = [];
 
   try {
@@ -141,12 +142,15 @@ export default async function DashboardPage() {
 
     const thirtyDaysAgo = new Date(currentDate.getTime() - 30 * 24 * 60 * 60 * 1000);
     const deudoresMap: { id: string; nombre: string; deuda: number }[] = [];
+    const deudasViejasMap: { id: string; nombre: string; deuda: number; diasSinMovimiento: number }[] = [];
 
     allClients.forEach((cliente) => {
       let saldo = 0;
       let ultimaEntrega = new Date(0);
+      let lastMovimientoTime = 0;
 
       cliente.movimientos.forEach((m) => {
+        if (m.fecha.getTime() > lastMovimientoTime) lastMovimientoTime = m.fecha.getTime();
         if (m.tipo === "ENTREGA") {
           saldo += (m.cartones || 0) * (m.precioUnit || 0);
           if (m.fecha > ultimaEntrega) ultimaEntrega = m.fecha;
@@ -159,6 +163,10 @@ export default async function DashboardPage() {
         clientesConDeuda++;
         deudaTotal += saldo;
         deudoresMap.push({ id: cliente.id, nombre: cliente.nombre, deuda: saldo });
+        
+        let diasSinMovimiento = lastMovimientoTime > 0 ? Math.floor((currentDate.getTime() - lastMovimientoTime) / (1000 * 60 * 60 * 24)) : -1;
+        deudasViejasMap.push({ id: cliente.id, nombre: cliente.nombre, deuda: saldo, diasSinMovimiento });
+
         if (ultimaEntrega < thirtyDaysAgo) {
           clientesConDeudaVencida++;
         }
@@ -166,6 +174,7 @@ export default async function DashboardPage() {
     });
 
     topDeudores = deudoresMap.sort((a, b) => b.deuda - a.deuda).slice(0, 5);
+    topDeudasViejas = deudasViejasMap.sort((a, b) => b.diasSinMovimiento - a.diasSinMovimiento).slice(0, 5);
 
     // ── Chart: income per month for last 6 months ──
     const monthBuckets: ChartDataPoint[] = [];
@@ -352,7 +361,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* ── Second row: Desglose + Top Deudores + Chart ── */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {/* Desglose Cartones */}
         <Card className="shadow-sm">
           <CardHeader>
@@ -407,6 +416,48 @@ export default async function DashboardPage() {
                       </span>
                     </span>
                     <span className="text-sm font-bold text-red-500">
+                      ${client.deuda.toLocaleString("es-CO")}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Top 5 Deudas Más Viejas */}
+        <Card className="shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Top 5 Deudas Más Viejas
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {topDeudasViejas.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No hay clientes con deudas viejas.</p>
+            ) : (
+              <div className="space-y-3">
+                {topDeudasViejas.map((client, i) => (
+                  <Link
+                    key={client.id}
+                    href={`/clientes/${client.id}`}
+                    className="flex items-center justify-between group hover:bg-muted/50 rounded-md px-2 py-1.5 -mx-2 transition-colors"
+                  >
+                    <span className="flex flex-col">
+                      <span className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-muted-foreground w-5">
+                          {i + 1}.
+                        </span>
+                        <span className="text-sm font-medium group-hover:underline truncate max-w-[140px]">
+                          {client.nombre}
+                        </span>
+                      </span>
+                      <span className="text-[10px] text-muted-foreground ml-7">
+                        Hace {client.diasSinMovimiento} días
+                      </span>
+                    </span>
+                    <span className="text-sm font-bold text-destructive">
                       ${client.deuda.toLocaleString("es-CO")}
                     </span>
                   </Link>
