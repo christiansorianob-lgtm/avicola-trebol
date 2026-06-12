@@ -485,11 +485,37 @@ export default function DetalleClienteClient({
           </DialogHeader>
           <div className="py-4 space-y-2 text-sm">
             <p>Se registró un pago de <strong>${lastPagoData?.monto.toLocaleString("es-CO")}</strong> para <strong>{cliente.nombre}</strong>.</p>
-            <p className="text-muted-foreground">¿Deseas descargar un recibo en PDF?</p>
+            <p className="text-muted-foreground">¿Deseas descargar un recibo o enviar confirmación por WhatsApp?</p>
           </div>
-          <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>No, gracias</DialogClose>
-            <Button onClick={() => { generateReciboPDF(); setOpenRecibo(false); }}>Descargar Recibo PDF</Button>
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:justify-end">
+            <DialogClose render={<Button variant="outline" className="w-full sm:w-auto" />}>Cerrar</DialogClose>
+            <Button variant="secondary" className="w-full sm:w-auto" onClick={() => { generateReciboPDF(); setOpenRecibo(false); }}>
+              Descargar PDF
+            </Button>
+            <Button 
+              className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
+              disabled={!cliente.telefono}
+              onClick={() => {
+                if (!cliente.telefono) return;
+                const cleanPhone = cliente.telefono.replace(/\D/g, "");
+                const p = lastPagoData;
+                if (!p) return;
+                
+                let mensaje = `Hola ${cliente.nombre}, confirmamos la recepción de tu pago de $${p.monto.toLocaleString("es-CO")} en Avícola El Trébol el ${p.fecha}. `;
+                
+                if (p.saldoRestante === 0) {
+                  mensaje += `¡Tu cuenta está al día! Gracias por tu pago.`;
+                } else {
+                  mensaje += `Tu saldo pendiente actualizado es de $${p.saldoRestante.toLocaleString("es-CO")}. ¡Gracias!`;
+                }
+                
+                window.open(`https://wa.me/57${cleanPhone}?text=${encodeURIComponent(mensaje)}`, "_blank");
+                setOpenRecibo(false);
+              }}
+            >
+              <MessageCircle className="mr-2 h-4 w-4" /> 
+              {cliente.telefono ? "Enviar por WhatsApp" : "Sin teléfono"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -504,15 +530,13 @@ export default function DetalleClienteClient({
             <p>Se registró la entrega de <strong>{lastEntregaData?.cantidad} cartones</strong> a <strong>{cliente.nombre}</strong>.</p>
             <p className="text-muted-foreground">¿Deseas enviar una confirmación del pedido por WhatsApp?</p>
           </div>
-          <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>No, gracias</DialogClose>
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:justify-end">
+            <DialogClose render={<Button variant="outline" className="w-full sm:w-auto" />}>No, gracias</DialogClose>
             <Button 
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
+              disabled={!cliente.telefono}
               onClick={() => {
-                if (!cliente.telefono) {
-                  alert("Este cliente no tiene número de teléfono registrado.");
-                  return;
-                }
+                if (!cliente.telefono) return;
                 const cleanPhone = cliente.telefono.replace(/\D/g, "");
                 const d = lastEntregaData;
                 if (!d) return;
@@ -521,7 +545,8 @@ export default function DetalleClienteClient({
                 setOpenConfirmacionEntrega(false);
               }}
             >
-              <MessageCircle className="mr-2 h-4 w-4" /> Enviar por WhatsApp
+              <MessageCircle className="mr-2 h-4 w-4" /> 
+              {cliente.telefono ? "Enviar por WhatsApp" : "Sin teléfono"}
             </Button>
           </DialogFooter>
         </DialogContent>
