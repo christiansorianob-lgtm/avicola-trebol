@@ -92,3 +92,15 @@ export async function registrarBajada(data: {
     return { success: false, error: "Error al registrar producción" };
   }
 }
+
+export async function obtenerDatosExportacionExcel() {
+  try {
+    const clientes = await prisma.cliente.findMany({
+      include: { movimientos: { orderBy: { fecha: 'desc' } } },
+      orderBy: { nombre: 'asc' }
+    });
+    return { success: true, clientes };
+  } catch (error) {
+    return { success: false, error: "Error al obtener datos para exportar" };
+  }
+}

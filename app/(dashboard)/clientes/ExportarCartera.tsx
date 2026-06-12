@@ -1,89 +1,119 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { FileDown, FileSpreadsheet } from "lucide-react";
-import jsPDF from "jspdf";
-import "jspdf-autotable";
+import { FileSpreadsheet, Loader2 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { format } from "date-fns";
+import { obtenerDatosExportacionExcel } from "@/app/actions";
+import { ETIQUETAS_CARTON, TipoCartonType } from "@/lib/config";
 
-type ClienteExport = {
-  nombre: string;
-  telefono: string | null;
-  saldoPesos: number;
-  ultimaFecha: string | null;
-};
+export default function ExportarCartera() {
+  const [loading, setLoading] = useState(false);
 
-export default function ExportarCartera({ clientes }: { clientes: ClienteExport[] }) {
-  const exportPDF = () => {
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
+  const exportExcel = async () => {
+    setLoading(true);
+    try {
+      const res = await obtenerDatosExportacionExcel();
+      if (!res.success || !res.clientes) {
+        alert("Error al obtener los datos");
+        setLoading(false);
+        return;
+      }
 
-    // Header
-    doc.setFillColor(34, 139, 34);
-    doc.rect(0, 0, pageWidth, 30, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(18);
-    doc.setFont("helvetica", "bold");
-    doc.text("Cartera de Clientes — Avícola El Trébol", pageWidth / 2, 18, { align: "center" });
+      const clientes = res.clientes;
 
-    doc.setTextColor(100, 100, 100);
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Generado el ${format(new Date(), "dd/MM/yyyy HH:mm")}`, pageWidth / 2, 38, { align: "center" });
+      // 1. Hoja de Resumen de Clientes
+      const dataResumen = clientes.map((c: any) => {
+        let saldoPesos = 0;
+        let ultimaFechaStr = "Sin movimientos";
+        
+        c.movimientos.forEach((m: any) => {
+          if (m.tipo === "ENTREGA") {
+            saldoPesos += (m.cartones || 0) * (m.precioUnit || 0);
+          } else if (m.tipo === "PAGO") {
+            saldoPesos -= (m.monto || 0);
+          }
+        });
 
-    const tableData = clientes.map((c) => [
-      c.nombre,
-      c.telefono || "—",
-      `$${Math.max(0, c.saldoPesos).toLocaleString("es-CO")}`,
-      c.ultimaFecha || "Sin movimientos",
-    ]);
+        if (c.movimientos.length > 0) {
+          ultimaFechaStr = format(new Date(c.movimientos[0].fecha), "dd/MM/yyyy HH:mm");
+        }
 
-    (doc as unknown as { autoTable: (opts: Record<string, unknown>) => void }).autoTable({
-      startY: 44,
-      head: [["Nombre", "Teléfono", "Saldo Pendiente", "Última Actividad"]],
-      body: tableData,
-      theme: "striped",
-      headStyles: { fillColor: [34, 139, 34], textColor: 255, fontStyle: "bold" },
-      styles: { fontSize: 10, cellPadding: 4 },
-      alternateRowStyles: { fillColor: [245, 245, 245] },
-    });
+        return {
+          "Nombre de Cliente": c.nombre,
+          "Teléfono": c.telefono || "",
+          "Dirección": c.direccion || "",
+          "Saldo Pendiente ($)": Math.max(0, saldoPesos),
+          "Última Actividad": ultimaFechaStr,
+        };
+      });
 
-    doc.save(`cartera_clientes_${format(new Date(), "yyyyMMdd")}.pdf`);
-  };
+      // 2. Hoja de Movimientos Detallados
+      const dataMovimientos: any[] = [];
+      
+      clientes.forEach((c: any) => {
+        let saldoAcumulado = 0;
+        // Calcular saldos acumulados de antiguo a reciente
+        const movsAsc = [...c.movimientos].reverse().map((m: any) => {
+          if (m.tipo === "ENTREGA") {
+            saldoAcumulado += (m.cartones || 0) * (m.precioUnit || 0);
+          } else {
+            saldoAcumulado -= (m.monto || 0);
+          }
+          return { ...m, saldoAcumulado };
+        });
 
-  const exportExcel = () => {
-    const data = clientes.map((c) => ({
-      Nombre: c.nombre,
-      Teléfono: c.telefono || "",
-      "Saldo Pendiente": Math.max(0, c.saldoPesos),
-      "Última Actividad": c.ultimaFecha || "Sin movimientos",
-    }));
+        // Agregarlos al reporte
+        movsAsc.forEach((m: any) => {
+          let detalle = m.tipo === "ENTREGA" 
+            ? `${m.cartones} cartones ${m.tipoCarton ? ETIQUETAS_CARTON[m.tipoCarton as TipoCartonType] : ''}`
+            : "Abono/Pago";
+          
+          if (m.notas) detalle += ` - ${m.notas}`;
 
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Cartera");
+          let valorMovimiento = m.tipo === "ENTREGA"
+            ? (m.cartones || 0) * (m.precioUnit || 0)
+            : -(m.monto || 0);
 
-    // Set column widths
-    ws["!cols"] = [
-      { wch: 30 },
-      { wch: 15 },
-      { wch: 18 },
-      { wch: 20 },
-    ];
+          dataMovimientos.push({
+            "Cliente": c.nombre,
+            "Fecha": format(new Date(m.fecha), "dd/MM/yyyy HH:mm"),
+            "Tipo": m.tipo,
+            "Detalle": detalle,
+            "Valor ($)": valorMovimiento,
+            "Saldo Acumulado ($)": Math.max(0, m.saldoAcumulado)
+          });
+        });
+      });
 
-    XLSX.writeFile(wb, `cartera_clientes_${format(new Date(), "yyyyMMdd")}.xlsx`);
+      // Crear archivo Excel
+      const wb = XLSX.utils.book_new();
+      
+      // Añadir Resumen
+      const wsResumen = XLSX.utils.json_to_sheet(dataResumen);
+      wsResumen["!cols"] = [{ wch: 30 }, { wch: 15 }, { wch: 30 }, { wch: 20 }, { wch: 20 }];
+      XLSX.utils.book_append_sheet(wb, wsResumen, "Resumen Clientes");
+
+      // Añadir Movimientos
+      const wsMovimientos = XLSX.utils.json_to_sheet(dataMovimientos);
+      wsMovimientos["!cols"] = [{ wch: 30 }, { wch: 20 }, { wch: 12 }, { wch: 40 }, { wch: 15 }, { wch: 20 }];
+      XLSX.utils.book_append_sheet(wb, wsMovimientos, "Historial Movimientos");
+
+      XLSX.writeFile(wb, `Reporte_Cartera_${format(new Date(), "yyyyMMdd_HHmm")}.xlsx`);
+    } catch (error) {
+      console.error(error);
+      alert("Error al generar Excel");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="flex gap-2 w-full sm:w-auto">
-      <Button variant="outline" size="sm" onClick={exportPDF} className="flex-1 sm:flex-none">
-        <FileDown className="mr-2 h-4 w-4" />
-        Exportar PDF
-      </Button>
-      <Button variant="outline" size="sm" onClick={exportExcel} className="flex-1 sm:flex-none">
-        <FileSpreadsheet className="mr-2 h-4 w-4" />
-        Exportar Excel
+    <div className="flex w-full sm:w-auto">
+      <Button variant="outline" size="sm" onClick={exportExcel} disabled={loading} className="flex-1 sm:flex-none">
+        {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileSpreadsheet className="mr-2 h-4 w-4 text-green-600" />}
+        Exportar Reporte Excel
       </Button>
     </div>
   );

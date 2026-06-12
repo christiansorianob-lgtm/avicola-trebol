@@ -102,12 +102,7 @@ export default function ClientesClient({ initialData }: { initialData: ClienteCo
         </div>
 
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-          <ExportarCartera clientes={initialData.map(c => ({
-            nombre: c.nombre,
-            telefono: c.telefono,
-            saldoPesos: c.saldoPesos,
-            ultimaFecha: c.ultimaFecha,
-          }))} />
+          <ExportarCartera />
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger render={<Button className="w-full sm:w-auto" />}>
               <Plus className="mr-2 h-4 w-4" />
