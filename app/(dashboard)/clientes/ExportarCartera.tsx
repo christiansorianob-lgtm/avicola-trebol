@@ -76,12 +76,12 @@ export default function ExportarCartera({ clientes }: { clientes: ClienteExport[
   };
 
   return (
-    <div className="flex gap-2">
-      <Button variant="outline" size="sm" onClick={exportPDF}>
+    <div className="flex gap-2 w-full sm:w-auto">
+      <Button variant="outline" size="sm" onClick={exportPDF} className="flex-1 sm:flex-none">
         <FileDown className="mr-2 h-4 w-4" />
         Exportar PDF
       </Button>
-      <Button variant="outline" size="sm" onClick={exportExcel}>
+      <Button variant="outline" size="sm" onClick={exportExcel} className="flex-1 sm:flex-none">
         <FileSpreadsheet className="mr-2 h-4 w-4" />
         Exportar Excel
       </Button>

@@ -101,7 +101,7 @@ export default function ClientesClient({ initialData }: { initialData: ClienteCo
           <p className="text-muted-foreground">Gestiona tus clientes y sus saldos pendientes.</p>
         </div>
 
-        <div className="flex gap-2 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <ExportarCartera clientes={initialData.map(c => ({
             nombre: c.nombre,
             telefono: c.telefono,
