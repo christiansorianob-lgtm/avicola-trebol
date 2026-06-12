@@ -35,7 +35,7 @@ export default function DashboardClient({ chartData }: DashboardClientProps) {
           tickLine={false}
         />
         <YAxis
-          tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`}
+          tickFormatter={(v: any) => `$${(Number(v) / 1000).toFixed(0)}k`}
           tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
           axisLine={false}
           tickLine={false}
@@ -50,7 +50,7 @@ export default function DashboardClient({ chartData }: DashboardClientProps) {
             color: "hsl(var(--card-foreground))",
           }}
           labelStyle={{ color: "hsl(var(--muted-foreground))", fontWeight: 600, marginBottom: 4 }}
-          formatter={(value: number) => [formatCurrency(value), "Ingresos"]}
+          formatter={(value: any) => [formatCurrency(Number(value) || 0), "Ingresos"]}
         />
         <Bar
           dataKey="ingresos"
