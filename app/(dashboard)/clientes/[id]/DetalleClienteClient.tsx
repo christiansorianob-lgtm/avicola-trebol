@@ -69,7 +69,13 @@ export default function DetalleClienteClient({
   const [fechaEntrega, setFechaEntrega] = useState(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
   const [cartones, setCartones] = useState("");
   const [tipoCarton, setTipoCarton] = useState<TipoCartonType>("PEQUENO");
-  const [precioUnit, setPrecioUnit] = useState(PRECIOS_CARTON.PEQUENO.toString());
+
+  const getLastPrice = (type: TipoCartonType) => {
+    const lastMov = movimientos.find(m => m.tipo === "ENTREGA" && m.tipoCarton === type && m.precioUnit != null);
+    return lastMov && lastMov.precioUnit ? lastMov.precioUnit.toString() : PRECIOS_CARTON[type].toString();
+  };
+
+  const [precioUnit, setPrecioUnit] = useState(getLastPrice("PEQUENO"));
   const [notasEntrega, setNotasEntrega] = useState("");
 
   // Form Pago
@@ -112,7 +118,7 @@ export default function DetalleClienteClient({
     setOpenConfirmacionEntrega(true);
 
     setCartones("");
-    setPrecioUnit("");
+    setPrecioUnit(valPrecioUnit.toString());
     setNotasEntrega("");
     setFechaEntrega(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
   };
@@ -398,7 +404,7 @@ export default function DetalleClienteClient({
                       if (!val) return;
                       const selected = val as TipoCartonType;
                       setTipoCarton(selected);
-                      setPrecioUnit(PRECIOS_CARTON[selected].toString());
+                      setPrecioUnit(getLastPrice(selected));
                     }}>
                       <SelectTrigger>
                         <SelectValue />
