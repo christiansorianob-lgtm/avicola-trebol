@@ -23,8 +23,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { PlusCircle, PackageOpen, Layers, Activity, Edit } from "lucide-react";
-import { registrarBajada, editarBajada } from "@/app/actions";
+import { PlusCircle, PackageOpen, Layers, Activity, Edit, Trash2 } from "lucide-react";
+import { registrarBajada, editarBajada, eliminarBajada } from "@/app/actions";
 
 type Bajada = {
   id: string;
@@ -63,6 +63,7 @@ export default function ProduccionClient({
 }) {
   const [open, setOpen] = useState(false);
   const [editingBajada, setEditingBajada] = useState<Bajada | null>(null);
+  const [deletingBajada, setDeletingBajada] = useState<Bajada | null>(null);
   const [loading, setLoading] = useState(false);
 
   // Form
@@ -113,6 +114,16 @@ export default function ProduccionClient({
     setLoading(false);
     if (res.success) {
       setEditingBajada(null);
+    }
+  };
+
+  const handleDeleteBajada = async () => {
+    if (!deletingBajada) return;
+    setLoading(true);
+    const res = await eliminarBajada(deletingBajada.id);
+    setLoading(false);
+    if (res.success) {
+      setDeletingBajada(null);
     }
   };
 
@@ -328,9 +339,14 @@ export default function ProduccionClient({
                           {bajada.notas || "-"}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" onClick={() => openEdit(bajada)} className="h-8 w-8 text-muted-foreground hover:text-foreground">
-                            <Edit className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button variant="ghost" size="icon" onClick={() => openEdit(bajada)} className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => setDeletingBajada(bajada)} className="h-8 w-8 text-muted-foreground hover:text-destructive">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -388,6 +404,29 @@ export default function ProduccionClient({
               <Button type="submit" disabled={loading || editTotalCartones === 0}>Guardar Cambios</Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmar Eliminar Despacho */}
+      <Dialog open={!!deletingBajada} onOpenChange={(o) => !o && setDeletingBajada(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>¿Eliminar este Despacho?</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-2">
+            <p className="text-muted-foreground">Estás a punto de eliminar este registro de recepción de Finca:</p>
+            {deletingBajada && (
+              <div className="p-3 bg-muted/50 rounded-lg text-sm">
+                <p><strong>Fecha:</strong> {format(new Date(deletingBajada.fecha), "dd/MM/yyyy HH:mm")}</p>
+                <p><strong>Total Cartones:</strong> {deletingBajada.cartonesPequeno + deletingBajada.cartonesMediano + deletingBajada.cartonesGrande + deletingBajada.cartonesJumbo}</p>
+              </div>
+            )}
+            <p className="text-sm font-medium text-destructive mt-2">⚠️ El cálculo de Mermas se verá afectado. Esta acción no se puede deshacer.</p>
+          </div>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" type="button" />}>Cancelar</DialogClose>
+            <Button variant="destructive" onClick={handleDeleteBajada} disabled={loading}>Sí, eliminar</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

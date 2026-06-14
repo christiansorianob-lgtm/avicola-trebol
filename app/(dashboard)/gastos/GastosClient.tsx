@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PlusCircle, Calendar as CalendarIcon, Filter, Settings, Trash2, Plus, Edit } from "lucide-react";
-import { registrarGasto, editarGasto } from "@/app/actions";
+import { registrarGasto, editarGasto, eliminarGasto } from "@/app/actions";
 
 const CATEGORIAS_DEFAULT = [
   "Concentrado",
@@ -41,6 +41,7 @@ export default function GastosClient({ initialGastos }: { initialGastos: Gasto[]
   const [open, setOpen] = useState(false);
   const [openAdmin, setOpenAdmin] = useState(false);
   const [editingGasto, setEditingGasto] = useState<Gasto | null>(null);
+  const [deletingGasto, setDeletingGasto] = useState<Gasto | null>(null);
   const [loading, setLoading] = useState(false);
   const [mesFiltro, setMesFiltro] = useState<string>(format(new Date(), "yyyy-MM"));
   const [nuevaCategoria, setNuevaCategoria] = useState("");
@@ -86,6 +87,16 @@ export default function GastosClient({ initialGastos }: { initialGastos: Gasto[]
     setLoading(false);
     if (res.success) {
       setEditingGasto(null);
+    }
+  };
+
+  const handleDeleteGasto = async () => {
+    if (!deletingGasto) return;
+    setLoading(true);
+    const res = await eliminarGasto(deletingGasto.id);
+    setLoading(false);
+    if (res.success) {
+      setDeletingGasto(null);
     }
   };
 
@@ -303,9 +314,14 @@ export default function GastosClient({ initialGastos }: { initialGastos: Gasto[]
                       ${g.monto.toLocaleString("es-CO")}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <Button variant="ghost" size="icon" onClick={() => openEdit(g)} className="h-8 w-8 text-muted-foreground hover:text-foreground">
-                        <Edit className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(g)} className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setDeletingGasto(g)} className="h-8 w-8 text-muted-foreground hover:text-destructive">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -356,6 +372,30 @@ export default function GastosClient({ initialGastos }: { initialGastos: Gasto[]
               <Button type="submit" disabled={loading} className="bg-destructive text-destructive-foreground hover:bg-destructive/80">Guardar Cambios</Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmar Eliminar Gasto */}
+      <Dialog open={!!deletingGasto} onOpenChange={(o) => !o && setDeletingGasto(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>¿Eliminar este Gasto?</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-2">
+            <p className="text-muted-foreground">Estás a punto de eliminar este gasto de los registros:</p>
+            {deletingGasto && (
+              <div className="p-3 bg-muted/50 rounded-lg text-sm">
+                <p><strong>Categoría:</strong> {deletingGasto.categoria}</p>
+                <p><strong>Fecha:</strong> {format(new Date(deletingGasto.fecha), "dd/MM/yyyy HH:mm")}</p>
+                <p><strong>Monto:</strong> ${deletingGasto.monto.toLocaleString("es-CO")}</p>
+              </div>
+            )}
+            <p className="text-sm font-medium text-destructive mt-2">⚠️ El total del mes se recalculará automáticamente. Esta acción no se puede deshacer.</p>
+          </div>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" type="button" />}>Cancelar</DialogClose>
+            <Button variant="destructive" onClick={handleDeleteGasto} disabled={loading}>Sí, eliminar</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

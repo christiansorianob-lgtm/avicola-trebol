@@ -20,7 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, PlusCircle, Banknote, Calendar, Trash2, Edit, MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { registrarMovimiento, eliminarCliente, editarCliente, editarMovimiento } from "@/app/actions";
+import { registrarMovimiento, eliminarCliente, editarCliente, editarMovimiento, eliminarMovimiento } from "@/app/actions";
 import { PRECIOS_CARTON, ETIQUETAS_CARTON, TipoCartonType } from "@/lib/config";
 import { TipoCarton } from "@prisma/client";
 import jsPDF from "jspdf";
@@ -59,6 +59,7 @@ export default function DetalleClienteClient({
   const [openDelete, setOpenDelete] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
   const [editingMovimiento, setEditingMovimiento] = useState<Movimiento | null>(null);
+  const [deletingMovimiento, setDeletingMovimiento] = useState<Movimiento | null>(null);
 
   // Edit Movimiento Form
   const [editMovFecha, setEditMovFecha] = useState("");
@@ -95,6 +96,18 @@ export default function DetalleClienteClient({
     }, cliente.id);
     setLoading(false);
     setEditingMovimiento(null);
+  };
+
+  const handleDeleteMovimiento = async () => {
+    if (!deletingMovimiento) return;
+    setLoading(true);
+    const res = await eliminarMovimiento(deletingMovimiento.id, cliente.id);
+    setLoading(false);
+    if (res.success) {
+      setDeletingMovimiento(null);
+    } else {
+      alert("Error al eliminar movimiento");
+    }
   };
   const [openRecibo, setOpenRecibo] = useState(false);
   const [openConfirmacionEntrega, setOpenConfirmacionEntrega] = useState(false);
@@ -653,9 +666,14 @@ export default function DetalleClienteClient({
                       ${Math.max(0, m.saldoAcumulado).toLocaleString("es-CO")}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <Button variant="ghost" size="icon" onClick={() => openEditMov(m)} className="h-8 w-8 text-muted-foreground hover:text-foreground">
-                        <Edit className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => openEditMov(m)} className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setDeletingMovimiento(m)} className="h-8 w-8 text-muted-foreground hover:text-destructive">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -726,6 +744,32 @@ export default function DetalleClienteClient({
               <Button type="submit" disabled={loading}>Guardar Cambios</Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmar Eliminar Movimiento */}
+      <Dialog open={!!deletingMovimiento} onOpenChange={(o) => !o && setDeletingMovimiento(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>¿Eliminar este registro?</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-2">
+            <p className="text-muted-foreground">Estás a punto de eliminar permanentemente este registro:</p>
+            {deletingMovimiento && (
+              <div className="p-3 bg-muted/50 rounded-lg text-sm">
+                <p><strong>Tipo:</strong> {deletingMovimiento.tipo}</p>
+                <p><strong>Fecha:</strong> {format(new Date(deletingMovimiento.fecha), "dd/MM/yyyy HH:mm")}</p>
+                <p><strong>Monto/Valor:</strong> {deletingMovimiento.tipo === "ENTREGA" 
+                  ? `$${((deletingMovimiento.cartones || 0) * (deletingMovimiento.precioUnit || 0)).toLocaleString("es-CO")}`
+                  : `$${(deletingMovimiento.monto || 0).toLocaleString("es-CO")}`}</p>
+              </div>
+            )}
+            <p className="text-sm font-medium text-destructive mt-2">⚠️ El saldo del cliente se recalculará automáticamente. Esta acción no se puede deshacer.</p>
+          </div>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" type="button" />}>Cancelar</DialogClose>
+            <Button variant="destructive" onClick={handleDeleteMovimiento} disabled={loading}>Sí, eliminar</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

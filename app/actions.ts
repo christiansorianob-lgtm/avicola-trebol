@@ -147,6 +147,40 @@ export async function editarBajada(id: string, data: {
   }
 }
 
+export async function eliminarMovimiento(id: string, clienteId: string) {
+  try {
+    await prisma.movimiento.delete({ where: { id } });
+    revalidatePath(`/clientes/${clienteId}`);
+    revalidatePath("/clientes");
+    revalidatePath("/");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "Error al eliminar movimiento" };
+  }
+}
+
+export async function eliminarGasto(id: string) {
+  try {
+    await prisma.gasto.delete({ where: { id } });
+    revalidatePath("/gastos");
+    revalidatePath("/");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "Error al eliminar gasto" };
+  }
+}
+
+export async function eliminarBajada(id: string) {
+  try {
+    await prisma.bajada.delete({ where: { id } });
+    revalidatePath("/produccion");
+    revalidatePath("/");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "Error al eliminar producción" };
+  }
+}
+
 export async function obtenerDatosExportacionExcel() {
   try {
     const clientes = await prisma.cliente.findMany({
