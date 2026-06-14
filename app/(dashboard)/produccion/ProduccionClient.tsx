@@ -23,8 +23,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { PlusCircle, PackageOpen, Layers, Activity } from "lucide-react";
-import { registrarBajada } from "@/app/actions";
+import { PlusCircle, PackageOpen, Layers, Activity, Edit } from "lucide-react";
+import { registrarBajada, editarBajada } from "@/app/actions";
 
 type Bajada = {
   id: string;
@@ -62,6 +62,7 @@ export default function ProduccionClient({
   mermaMes: MermaMes
 }) {
   const [open, setOpen] = useState(false);
+  const [editingBajada, setEditingBajada] = useState<Bajada | null>(null);
   const [loading, setLoading] = useState(false);
 
   // Form
@@ -73,6 +74,47 @@ export default function ProduccionClient({
   const [notas, setNotas] = useState("");
 
   const totalCartones = cPequeno + cMediano + cGrande + cJumbo;
+
+  // Edit form
+  const [editFecha, setEditFecha] = useState("");
+  const [editCPequeno, setEditCPequeno] = useState(0);
+  const [editCMediano, setEditCMediano] = useState(0);
+  const [editCGrande, setEditCGrande] = useState(0);
+  const [editCJumbo, setEditCJumbo] = useState(0);
+  const [editNotas, setEditNotas] = useState("");
+  const editTotalCartones = editCPequeno + editCMediano + editCGrande + editCJumbo;
+
+  const openEdit = (b: Bajada) => {
+    setEditingBajada(b);
+    setEditFecha(format(new Date(b.fecha), "yyyy-MM-dd'T'HH:mm"));
+    setEditCPequeno(b.cartonesPequeno);
+    setEditCMediano(b.cartonesMediano);
+    setEditCGrande(b.cartonesGrande);
+    setEditCJumbo(b.cartonesJumbo);
+    setEditNotas(b.notas || "");
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingBajada) return;
+    if (editTotalCartones === 0) {
+      alert("Debe registrar al menos un cartón");
+      return;
+    }
+    setLoading(true);
+    const res = await editarBajada(editingBajada.id, {
+      fecha: new Date(editFecha),
+      cartonesPequeno: editCPequeno,
+      cartonesMediano: editCMediano,
+      cartonesGrande: editCGrande,
+      cartonesJumbo: editCJumbo,
+      notas: editNotas
+    });
+    setLoading(false);
+    if (res.success) {
+      setEditingBajada(null);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -259,12 +301,13 @@ export default function ProduccionClient({
                   <TableHead className="text-center">Jumbo</TableHead>
                   <TableHead className="text-center font-bold">Total</TableHead>
                   <TableHead className="min-w-[200px]">Notas</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {initialBajadas.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       No hay despachos registrados.
                     </TableCell>
                   </TableRow>
@@ -284,6 +327,11 @@ export default function ProduccionClient({
                         <TableCell className="text-muted-foreground text-sm">
                           {bajada.notas || "-"}
                         </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" onClick={() => openEdit(bajada)} className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     );
                   })
@@ -293,6 +341,55 @@ export default function ProduccionClient({
           </div>
         </CardContent>
       </Card>
+
+      {/* Formulario Editar Despacho */}
+      <Dialog open={!!editingBajada} onOpenChange={(o) => !o && setEditingBajada(null)}>
+        <DialogContent>
+          <form onSubmit={handleEditSubmit}>
+            <DialogHeader>
+              <DialogTitle>Editar Despacho de Finca</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Fecha del Despacho</Label>
+                <Input type="datetime-local" required value={editFecha} onChange={e => setEditFecha(e.target.value)} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Pequeño (50-55gr)</Label>
+                  <Input type="number" value={editCPequeno || ''} onChange={e => setEditCPequeno(parseInt(e.target.value) || 0)} min="0" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Mediano (56-61gr)</Label>
+                  <Input type="number" value={editCMediano || ''} onChange={e => setEditCMediano(parseInt(e.target.value) || 0)} min="0" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Grande (62-67gr)</Label>
+                  <Input type="number" value={editCGrande || ''} onChange={e => setEditCGrande(parseInt(e.target.value) || 0)} min="0" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Jumbo (68-90gr)</Label>
+                  <Input type="number" value={editCJumbo || ''} onChange={e => setEditCJumbo(parseInt(e.target.value) || 0)} min="0" />
+                </div>
+              </div>
+              <div className="pt-2 pb-1 border-t border-b border-border flex justify-between items-center bg-muted/50 px-3 rounded-md">
+                <span className="font-medium text-sm">Total Cartones:</span>
+                <span className="font-bold text-lg text-primary">{editTotalCartones}</span>
+              </div>
+              <div className="space-y-2">
+                <Label>Notas (opcional)</Label>
+                <Input value={editNotas} onChange={e => setEditNotas(e.target.value)} placeholder="Observaciones del despacho..." />
+              </div>
+            </div>
+            <DialogFooter>
+              <DialogClose render={<Button variant="outline" type="button" />}>
+                Cancelar
+              </DialogClose>
+              <Button type="submit" disabled={loading || editTotalCartones === 0}>Guardar Cambios</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

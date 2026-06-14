@@ -20,7 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, PlusCircle, Banknote, Calendar, Trash2, Edit, MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { registrarMovimiento, eliminarCliente, editarCliente } from "@/app/actions";
+import { registrarMovimiento, eliminarCliente, editarCliente, editarMovimiento } from "@/app/actions";
 import { PRECIOS_CARTON, ETIQUETAS_CARTON, TipoCartonType } from "@/lib/config";
 import { TipoCarton } from "@prisma/client";
 import jsPDF from "jspdf";
@@ -58,6 +58,44 @@ export default function DetalleClienteClient({
   const [openPago, setOpenPago] = useState(false);
   const [openDelete, setOpenDelete] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
+  const [editingMovimiento, setEditingMovimiento] = useState<Movimiento | null>(null);
+
+  // Edit Movimiento Form
+  const [editMovFecha, setEditMovFecha] = useState("");
+  const [editMovTipo, setEditMovTipo] = useState<"ENTREGA" | "PAGO">("ENTREGA");
+  const [editMovCartones, setEditMovCartones] = useState("");
+  const [editMovTipoCarton, setEditMovTipoCarton] = useState<TipoCartonType>("PEQUENO");
+  const [editMovPrecioUnit, setEditMovPrecioUnit] = useState("");
+  const [editMovMonto, setEditMovMonto] = useState("");
+  const [editMovNotas, setEditMovNotas] = useState("");
+
+  const openEditMov = (m: Movimiento) => {
+    setEditingMovimiento(m);
+    setEditMovFecha(format(new Date(m.fecha), "yyyy-MM-dd'T'HH:mm"));
+    setEditMovTipo(m.tipo as "ENTREGA" | "PAGO");
+    setEditMovCartones(m.cartones ? m.cartones.toString() : "");
+    setEditMovTipoCarton((m.tipoCarton as TipoCartonType) || "PEQUENO");
+    setEditMovPrecioUnit(m.precioUnit ? m.precioUnit.toString() : "");
+    setEditMovMonto(m.monto ? m.monto.toString() : "");
+    setEditMovNotas(m.notas || "");
+  };
+
+  const handleEditMovimiento = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingMovimiento) return;
+    setLoading(true);
+    await editarMovimiento(editingMovimiento.id, {
+      tipo: editMovTipo,
+      fecha: new Date(editMovFecha),
+      cartones: editMovTipo === "ENTREGA" ? parseInt(editMovCartones) : undefined,
+      tipoCarton: editMovTipo === "ENTREGA" ? editMovTipoCarton : undefined,
+      precioUnit: editMovTipo === "ENTREGA" ? parseFloat(editMovPrecioUnit) : undefined,
+      monto: editMovTipo === "PAGO" ? parseFloat(editMovMonto) : undefined,
+      notas: editMovNotas
+    }, cliente.id);
+    setLoading(false);
+    setEditingMovimiento(null);
+  };
   const [openRecibo, setOpenRecibo] = useState(false);
   const [openConfirmacionEntrega, setOpenConfirmacionEntrega] = useState(false);
   const [lastPagoData, setLastPagoData] = useState<{ monto: number; fecha: string; saldoRestante: number } | null>(null);
@@ -572,12 +610,13 @@ export default function DetalleClienteClient({
                   <th className="px-4 py-3">Detalle</th>
                   <th className="px-4 py-3 text-right">Monto / Valor</th>
                   <th className="px-4 py-3 text-right">Saldo Acum.</th>
+                  <th className="px-4 py-3 text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {movsAsc.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
+                    <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
                       No hay movimientos registrados
                     </td>
                   </tr>
@@ -613,6 +652,11 @@ export default function DetalleClienteClient({
                     <td className="px-4 py-3 text-right font-bold">
                       ${Math.max(0, m.saldoAcumulado).toLocaleString("es-CO")}
                     </td>
+                    <td className="px-4 py-3 text-right">
+                      <Button variant="ghost" size="icon" onClick={() => openEditMov(m)} className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -620,6 +664,70 @@ export default function DetalleClienteClient({
           </div>
         </CardContent>
       </Card>
+
+      {/* Formulario Editar Movimiento */}
+      <Dialog open={!!editingMovimiento} onOpenChange={(open) => !open && setEditingMovimiento(null)}>
+        <DialogContent>
+          <form onSubmit={handleEditMovimiento}>
+            <DialogHeader>
+              <DialogTitle>Editar {editMovTipo === "ENTREGA" ? "Entrega" : "Pago"}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Fecha</Label>
+                <Input type="datetime-local" required value={editMovFecha} onChange={e => setEditMovFecha(e.target.value)} />
+              </div>
+              
+              {editMovTipo === "ENTREGA" && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Cantidad de cartones</Label>
+                      <Input type="number" required value={editMovCartones} onChange={e => setEditMovCartones(e.target.value)} min="1" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Tipo de Cartón</Label>
+                      <Select value={editMovTipoCarton} onValueChange={(val) => setEditMovTipoCarton(val as TipoCartonType)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="PEQUENO">Pequeño</SelectItem>
+                          <SelectItem value="MEDIANO">Mediano</SelectItem>
+                          <SelectItem value="GRANDE">Grande</SelectItem>
+                          <SelectItem value="JUMBO">Jumbo</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Precio por cartón ($)</Label>
+                    <Input type="number" required value={editMovPrecioUnit} onChange={e => setEditMovPrecioUnit(e.target.value)} min="1" />
+                  </div>
+                </>
+              )}
+
+              {editMovTipo === "PAGO" && (
+                <div className="space-y-2">
+                  <Label>Monto Pagado ($)</Label>
+                  <Input type="number" required value={editMovMonto} onChange={e => setEditMovMonto(e.target.value)} min="1" />
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label>Notas (opcional)</Label>
+                <Input value={editMovNotas} onChange={e => setEditMovNotas(e.target.value)} />
+              </div>
+            </div>
+            <DialogFooter>
+              <DialogClose render={<Button variant="outline" type="button" />}>
+                Cancelar
+              </DialogClose>
+              <Button type="submit" disabled={loading}>Guardar Cambios</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

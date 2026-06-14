@@ -93,6 +93,60 @@ export async function registrarBajada(data: {
   }
 }
 
+export async function editarMovimiento(id: string, data: {
+  tipo: "ENTREGA" | "PAGO";
+  fecha: Date;
+  cartones?: number;
+  tipoCarton?: TipoCarton;
+  precioUnit?: number;
+  monto?: number;
+  notas?: string;
+}, clienteId: string) {
+  try {
+    const mov = await prisma.movimiento.update({ where: { id }, data });
+    revalidatePath(`/clientes/${clienteId}`);
+    revalidatePath("/clientes");
+    revalidatePath("/");
+    return { success: true, movimiento: mov };
+  } catch (error) {
+    return { success: false, error: "Error al editar movimiento" };
+  }
+}
+
+export async function editarGasto(id: string, data: {
+  fecha: Date;
+  categoria: string;
+  descripcion?: string;
+  monto: number;
+}) {
+  try {
+    const gasto = await prisma.gasto.update({ where: { id }, data });
+    revalidatePath("/gastos");
+    revalidatePath("/");
+    return { success: true, gasto };
+  } catch (error) {
+    return { success: false, error: "Error al editar gasto" };
+  }
+}
+
+export async function editarBajada(id: string, data: {
+  fecha: Date;
+  cartonesPequeno: number;
+  cartonesMediano: number;
+  cartonesGrande: number;
+  cartonesJumbo: number;
+  notas?: string;
+}) {
+  try {
+    const bajada = await prisma.bajada.update({ where: { id }, data });
+    revalidatePath("/produccion");
+    revalidatePath("/");
+    return { success: true, bajada };
+  } catch (error) {
+    return { success: false, error: "Error al editar producción" };
+  }
+}
+
 export async function obtenerDatosExportacionExcel() {
   try {
     const clientes = await prisma.cliente.findMany({

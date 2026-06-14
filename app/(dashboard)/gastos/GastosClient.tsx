@@ -17,8 +17,8 @@ import {
   DialogClose
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle, Calendar as CalendarIcon, Filter, Settings, Trash2, Plus } from "lucide-react";
-import { registrarGasto } from "@/app/actions";
+import { PlusCircle, Calendar as CalendarIcon, Filter, Settings, Trash2, Plus, Edit } from "lucide-react";
+import { registrarGasto, editarGasto } from "@/app/actions";
 
 const CATEGORIAS_DEFAULT = [
   "Concentrado",
@@ -40,6 +40,7 @@ type Gasto = {
 export default function GastosClient({ initialGastos }: { initialGastos: Gasto[] }) {
   const [open, setOpen] = useState(false);
   const [openAdmin, setOpenAdmin] = useState(false);
+  const [editingGasto, setEditingGasto] = useState<Gasto | null>(null);
   const [loading, setLoading] = useState(false);
   const [mesFiltro, setMesFiltro] = useState<string>(format(new Date(), "yyyy-MM"));
   const [nuevaCategoria, setNuevaCategoria] = useState("");
@@ -53,11 +54,40 @@ export default function GastosClient({ initialGastos }: { initialGastos: Gasto[]
     return CATEGORIAS_DEFAULT;
   });
 
-  // Form
   const [fecha, setFecha] = useState(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
   const [monto, setMonto] = useState("");
   const [categoria, setCategoria] = useState(categorias[0]);
   const [descripcion, setDescripcion] = useState("");
+
+  // Edit Form
+  const [editFecha, setEditFecha] = useState("");
+  const [editMonto, setEditMonto] = useState("");
+  const [editCategoria, setEditCategoria] = useState(categorias[0]);
+  const [editDescripcion, setEditDescripcion] = useState("");
+
+  const openEdit = (g: Gasto) => {
+    setEditingGasto(g);
+    setEditFecha(format(new Date(g.fecha), "yyyy-MM-dd'T'HH:mm"));
+    setEditMonto(g.monto.toString());
+    setEditCategoria(g.categoria);
+    setEditDescripcion(g.descripcion || "");
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingGasto) return;
+    setLoading(true);
+    const res = await editarGasto(editingGasto.id, {
+      fecha: new Date(editFecha),
+      categoria: editCategoria,
+      descripcion: editDescripcion,
+      monto: parseFloat(editMonto)
+    });
+    setLoading(false);
+    if (res.success) {
+      setEditingGasto(null);
+    }
+  };
 
   const saveCategorias = (newCats: string[]) => {
     setCategorias(newCats);
@@ -244,12 +274,13 @@ export default function GastosClient({ initialGastos }: { initialGastos: Gasto[]
                   <th className="px-4 py-3">Categoría</th>
                   <th className="px-4 py-3">Descripción</th>
                   <th className="px-4 py-3 text-right">Monto</th>
+                  <th className="px-4 py-3 text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredGastos.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
+                    <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
                       No hay gastos registrados en este mes
                     </td>
                   </tr>
@@ -271,6 +302,11 @@ export default function GastosClient({ initialGastos }: { initialGastos: Gasto[]
                     <td className="px-4 py-3 text-right font-bold text-destructive">
                       ${g.monto.toLocaleString("es-CO")}
                     </td>
+                    <td className="px-4 py-3 text-right">
+                      <Button variant="ghost" size="icon" onClick={() => openEdit(g)} className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -278,6 +314,50 @@ export default function GastosClient({ initialGastos }: { initialGastos: Gasto[]
           </div>
         </CardContent>
       </Card>
+
+      {/* Editar Gasto Dialog */}
+      <Dialog open={!!editingGasto} onOpenChange={(o) => !o && setEditingGasto(null)}>
+        <DialogContent>
+          <form onSubmit={handleEditSubmit}>
+            <DialogHeader>
+              <DialogTitle>Editar Gasto</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Fecha del Gasto</Label>
+                <Input type="datetime-local" required value={editFecha} onChange={e => setEditFecha(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Monto ($)</Label>
+                <Input type="number" required value={editMonto} onChange={e => setEditMonto(e.target.value)} min="1" />
+              </div>
+              <div className="space-y-2">
+                <Label>Categoría</Label>
+                <Select value={editCategoria} onValueChange={(val) => setEditCategoria(val || categorias[0])}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categorias.map(cat => (
+                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Descripción (opcional)</Label>
+                <Input value={editDescripcion} onChange={e => setEditDescripcion(e.target.value)} placeholder="Ej: Bultos etapa inicio..." />
+              </div>
+            </div>
+            <DialogFooter>
+              <DialogClose render={<Button variant="outline" type="button" />}>
+                Cancelar
+              </DialogClose>
+              <Button type="submit" disabled={loading} className="bg-destructive text-destructive-foreground hover:bg-destructive/80">Guardar Cambios</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
