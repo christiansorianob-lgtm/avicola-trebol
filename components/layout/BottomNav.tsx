@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Users, Receipt, Box, LogOut } from "lucide-react";
+import { Home, Users, Receipt, Box, LogOut, Settings } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "./ThemeToggle";
@@ -12,6 +12,7 @@ const navigation = [
   { name: "Clientes", href: "/clientes", icon: Users },
   { name: "Gastos", href: "/gastos", icon: Receipt },
   { name: "Despachos", href: "/produccion", icon: Box },
+  { name: "Configuración", href: "/configuracion", icon: Settings },
 ];
 
 export function BottomNav() {
