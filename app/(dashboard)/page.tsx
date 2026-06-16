@@ -13,6 +13,7 @@ import {
   Minus,
   BarChart3,
   Crown,
+  Trophy,
 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
@@ -218,258 +219,285 @@ export default async function DashboardPage() {
         </Card>
       )}
 
-      {/* ── Metric cards ── */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {/* Ingresos */}
-        <Link href="/clientes" className="block transition-transform hover:scale-[1.02]">
-          <Card className="border-l-4 border-l-primary shadow-sm cursor-pointer hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Ingresos</CardTitle>
-              <ArrowDownToLine className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-primary">
-                ${ingresosMes.toLocaleString("es-CO")}
-              </div>
-              <TrendBadge current={ingresosMes} previous={ingresosPrev} />
-            </CardContent>
-          </Card>
-        </Link>
+      {/* ── Section 1: Resumen Financiero ── */}
+      <section className="space-y-4 bg-muted/10 p-4 sm:p-6 rounded-xl border border-border/50">
+        <div className="flex items-center gap-2 border-b border-border/50 pb-3">
+          <BarChart3 className="h-5 w-5 text-primary" />
+          <h3 className="text-xl font-semibold tracking-tight">Resumen Financiero</h3>
+        </div>
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
+          {/* Ingresos */}
+          <Link href="/clientes" className="block transition-transform hover:scale-[1.02] h-full">
+            <Card className="border-l-4 border-l-primary shadow-sm cursor-pointer hover:shadow-md transition-shadow h-full">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Ingresos</CardTitle>
+                <ArrowDownToLine className="h-4 w-4 text-primary" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-primary">
+                  ${ingresosMes.toLocaleString("es-CO")}
+                </div>
+                <TrendBadge current={ingresosMes} previous={ingresosPrev} />
+              </CardContent>
+            </Card>
+          </Link>
 
-        {/* Gastos */}
-        <Link href="/gastos" className="block transition-transform hover:scale-[1.02]">
-          <Card className="border-l-4 border-l-destructive shadow-sm cursor-pointer hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Gastos</CardTitle>
-              <ArrowUpToLine className="h-4 w-4 text-destructive" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-destructive">
-                ${gastosMes.toLocaleString("es-CO")}
-              </div>
-              <TrendBadge current={gastosMes} previous={gastosPrev} />
-            </CardContent>
-          </Card>
-        </Link>
+          {/* Gastos */}
+          <Link href="/gastos" className="block transition-transform hover:scale-[1.02] h-full">
+            <Card className="border-l-4 border-l-destructive shadow-sm cursor-pointer hover:shadow-md transition-shadow h-full">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Gastos</CardTitle>
+                <ArrowUpToLine className="h-4 w-4 text-destructive" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-destructive">
+                  ${gastosMes.toLocaleString("es-CO")}
+                </div>
+                <TrendBadge current={gastosMes} previous={gastosPrev} />
+              </CardContent>
+            </Card>
+          </Link>
 
-        {/* Saldo Neto */}
-        <Card className="border-l-4 border-l-secondary shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Saldo Neto</CardTitle>
-            <DollarSign className="h-4 w-4 text-secondary-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div
-              className={cn(
-                "text-2xl font-bold",
-                saldoNeto >= 0 ? "text-primary" : "text-destructive"
-              )}
-            >
-              ${saldoNeto.toLocaleString("es-CO")}
-            </div>
-            <TrendBadge current={saldoNeto} previous={saldoPrev} />
-          </CardContent>
-        </Card>
-
-        {/* Cartones Entregados */}
-        <Link href="/produccion" className="block transition-transform hover:scale-[1.02]">
-          <Card className="shadow-sm cursor-pointer hover:shadow-md transition-shadow">
+          {/* Saldo Neto */}
+          <Card className="border-l-4 border-l-secondary shadow-sm h-full">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Cartones Entregados</CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{cartonesEntregados}</div>
-              <TrendBadge current={cartonesEntregados} previous={cartonesPrev} />
-            </CardContent>
-          </Card>
-        </Link>
-
-        {/* Deuda Total */}
-        <Link href="/clientes" className="block transition-transform hover:scale-[1.02]">
-          <Card className="shadow-sm cursor-pointer hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Deuda Total en Calle</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-destructive">
-                ${deudaTotal.toLocaleString("es-CO")}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                De {clientesConDeuda} clientes c/ deuda
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
-
-        {/* Deuda Vencida */}
-        <Link href="/clientes" className="block transition-transform hover:scale-[1.02]">
-          <Card
-            className={cn(
-              "shadow-sm cursor-pointer hover:shadow-md transition-shadow",
-              clientesConDeudaVencida > 0 && "border-destructive bg-destructive/5"
-            )}
-          >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Deuda Vencida (+30 días)</CardTitle>
-              <AlertTriangle
-                className={cn(
-                  "h-4 w-4",
-                  clientesConDeudaVencida > 0 ? "text-destructive" : "text-muted-foreground"
-                )}
-              />
+              <CardTitle className="text-sm font-medium">Saldo Neto</CardTitle>
+              <DollarSign className="h-4 w-4 text-secondary-foreground" />
             </CardHeader>
             <CardContent>
               <div
                 className={cn(
                   "text-2xl font-bold",
-                  clientesConDeudaVencida > 0 ? "text-destructive" : ""
+                  saldoNeto >= 0 ? "text-primary" : "text-destructive"
                 )}
               >
-                {clientesConDeudaVencida}
+                ${saldoNeto.toLocaleString("es-CO")}
               </div>
-              {clientesConDeudaVencida > 0 && (
-                <p className="text-xs text-destructive mt-1">Requiere atención</p>
-              )}
+              <TrendBadge current={saldoNeto} previous={saldoPrev} />
             </CardContent>
           </Card>
-        </Link>
-      </div>
+        </div>
+      </section>
 
-      {/* ── Inventario Section ── */}
-      <div className="grid gap-4 md:grid-cols-4">
-        {Object.entries(inventario).map(([tipo, cantidad]) => (
-          <Card key={tipo} className={cn("shadow-sm", cantidad < 0 && "border-destructive bg-destructive/5")}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Inventario {ETIQUETAS_CARTON[tipo as TipoCartonType]}</CardTitle>
-              <Package className={cn("h-4 w-4", cantidad < 0 ? "text-destructive" : "text-muted-foreground")} />
-            </CardHeader>
-            <CardContent>
-              <div className={cn("text-2xl font-bold", cantidad < 0 ? "text-destructive" : "")}>
-                {cantidad} {cantidad === 1 ? "cartón" : "cartones"}
-              </div>
-              {cantidad < 0 && (
-                <p className="text-xs text-destructive mt-1 font-medium">Inventario negativo</p>
+      {/* ── Section 2: Cartera ── */}
+      <section className="space-y-4 bg-muted/10 p-4 sm:p-6 rounded-xl border border-border/50">
+        <div className="flex items-center gap-2 border-b border-border/50 pb-3">
+          <Users className="h-5 w-5 text-primary" />
+          <h3 className="text-xl font-semibold tracking-tight">Cartera</h3>
+        </div>
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
+          {/* Cartones Entregados */}
+          <Link href="/produccion" className="block transition-transform hover:scale-[1.02] h-full">
+            <Card className="shadow-sm cursor-pointer hover:shadow-md transition-shadow h-full">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Cartones Entregados</CardTitle>
+                <Package className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{cartonesEntregados}</div>
+                <TrendBadge current={cartonesEntregados} previous={cartonesPrev} />
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* Deuda Total */}
+          <Link href="/clientes" className="block transition-transform hover:scale-[1.02] h-full">
+            <Card className="shadow-sm cursor-pointer hover:shadow-md transition-shadow h-full">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Deuda Total en Calle</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-destructive">
+                  ${deudaTotal.toLocaleString("es-CO")}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  De {clientesConDeuda} clientes c/ deuda
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* Deuda Vencida */}
+          <Link href="/clientes" className="block transition-transform hover:scale-[1.02] h-full">
+            <Card
+              className={cn(
+                "shadow-sm cursor-pointer hover:shadow-md transition-shadow h-full",
+                clientesConDeudaVencida > 0 && "border-destructive bg-destructive/5"
               )}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* ── Second row: Desglose + Top Deudores ── */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {/* Desglose Cartones */}
-        <Card className="shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Package className="h-5 w-5 text-muted-foreground" />
-              Desglose de Cartones (Este Mes)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {desgloseCartones.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No hay entregas registradas este mes.
-              </p>
-            ) : (
-              <div className="space-y-4">
-                {desgloseCartones.map((item) => (
-                  <div key={item.tipo} className="flex items-center justify-between">
-                    <span className="font-medium text-sm">{ETIQUETAS_CARTON[item.tipo]}</span>
-                    <span className="font-bold">{item.cantidad}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Top 5 Clientes con Mayor Deuda */}
-        <Card className="shadow-sm flex flex-col">
-          <Link href="/clientes?filter=top-deuda" className="hover:opacity-80 transition-opacity">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Crown className="h-5 w-5 text-amber-500" />
-                Top 5 Mayor Deuda
-                <span className="ml-auto text-xs font-normal text-muted-foreground underline">Ver filtro &rarr;</span>
-              </CardTitle>
-            </CardHeader>
+            >
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Deuda Vencida (+30 días)</CardTitle>
+                <AlertTriangle
+                  className={cn(
+                    "h-4 w-4",
+                    clientesConDeudaVencida > 0 ? "text-destructive" : "text-muted-foreground"
+                  )}
+                />
+              </CardHeader>
+              <CardContent>
+                <div
+                  className={cn(
+                    "text-2xl font-bold",
+                    clientesConDeudaVencida > 0 ? "text-destructive" : ""
+                  )}
+                >
+                  {clientesConDeudaVencida}
+                </div>
+                {clientesConDeudaVencida > 0 && (
+                  <p className="text-xs text-destructive mt-1">Requiere atención</p>
+                )}
+              </CardContent>
+            </Card>
           </Link>
-          <CardContent className="flex-1">
-            {topDeudores.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No hay clientes con deuda.</p>
-            ) : (
-              <div className="space-y-3">
-                {topDeudores.map((client, i) => (
-                  <Link
-                    key={client.id}
-                    href={`/clientes/${client.id}`}
-                    className="flex items-center justify-between group hover:bg-muted/50 rounded-md px-2 py-1.5 -mx-2 transition-colors"
-                  >
-                    <span className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-muted-foreground w-5">
-                        {i + 1}.
-                      </span>
-                      <span className="text-sm font-medium group-hover:underline truncate max-w-[160px]">
-                        {client.nombre}
-                      </span>
-                    </span>
-                    <span className="text-sm font-bold text-red-500">
-                      ${client.deuda.toLocaleString("es-CO")}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        </div>
+      </section>
 
-        {/* Top 5 Deudas Más Viejas */}
-        <Card className="shadow-sm flex flex-col">
-          <Link href="/clientes?filter=top-viejas" className="hover:opacity-80 transition-opacity">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-destructive" />
-                Top 5 Deudas Viejas
-                <span className="ml-auto text-xs font-normal text-muted-foreground underline">Ver filtro &rarr;</span>
-              </CardTitle>
-            </CardHeader>
-          </Link>
-          <CardContent className="flex-1">
-            {topDeudasViejas.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No hay clientes con deudas viejas.</p>
-            ) : (
-              <div className="space-y-3">
-                {topDeudasViejas.map((client, i) => (
-                  <Link
-                    key={client.id}
-                    href={`/clientes/${client.id}`}
-                    className="flex items-center justify-between group hover:bg-muted/50 rounded-md px-2 py-1.5 -mx-2 transition-colors"
-                  >
-                    <span className="flex flex-col">
+      {/* ── Section 3: Inventario ── */}
+      <section className="space-y-4 bg-muted/10 p-4 sm:p-6 rounded-xl border border-border/50">
+        <div className="flex items-center gap-2 border-b border-border/50 pb-3">
+          <Package className="h-5 w-5 text-primary" />
+          <h3 className="text-xl font-semibold tracking-tight">Inventario</h3>
+        </div>
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-4">
+          {Object.entries(inventario).map(([tipo, cantidad]) => (
+            <Card key={tipo} className={cn("shadow-sm h-full", cantidad < 0 && "border-destructive bg-destructive/5")}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Inventario {ETIQUETAS_CARTON[tipo as TipoCartonType]}</CardTitle>
+                <Package className={cn("h-4 w-4", cantidad < 0 ? "text-destructive" : "text-muted-foreground")} />
+              </CardHeader>
+              <CardContent>
+                <div className={cn("text-2xl font-bold", cantidad < 0 ? "text-destructive" : "")}>
+                  {cantidad} {cantidad === 1 ? "cartón" : "cartones"}
+                </div>
+                {cantidad < 0 && (
+                  <p className="text-xs text-destructive mt-1 font-medium">Inventario negativo</p>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Section 4: Rankings y Desglose ── */}
+      <section className="space-y-4 bg-muted/10 p-4 sm:p-6 rounded-xl border border-border/50">
+        <div className="flex items-center gap-2 border-b border-border/50 pb-3">
+          <Trophy className="h-5 w-5 text-primary" />
+          <h3 className="text-xl font-semibold tracking-tight">Rankings y Desglose</h3>
+        </div>
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
+          {/* Top 5 Clientes con Mayor Deuda */}
+          <Card className="shadow-sm flex flex-col h-full">
+            <Link href="/clientes?filter=top-deuda" className="hover:opacity-80 transition-opacity">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Crown className="h-5 w-5 text-amber-500" />
+                  Top 5 Mayor Deuda
+                  <span className="ml-auto text-xs font-normal text-muted-foreground underline">Ver filtro &rarr;</span>
+                </CardTitle>
+              </CardHeader>
+            </Link>
+            <CardContent className="flex-1">
+              {topDeudores.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No hay clientes con deuda.</p>
+              ) : (
+                <div className="space-y-3">
+                  {topDeudores.map((client, i) => (
+                    <Link
+                      key={client.id}
+                      href={`/clientes/${client.id}`}
+                      className="flex items-center justify-between group hover:bg-muted/50 rounded-md px-2 py-1.5 -mx-2 transition-colors"
+                    >
                       <span className="flex items-center gap-2">
                         <span className="text-xs font-bold text-muted-foreground w-5">
                           {i + 1}.
                         </span>
-                        <span className="text-sm font-medium group-hover:underline truncate max-w-[140px]">
+                        <span className="text-sm font-medium group-hover:underline truncate max-w-[160px]">
                           {client.nombre}
                         </span>
                       </span>
-                      <span className="text-[10px] text-muted-foreground ml-7">
-                        Hace {client.diasSinMovimiento} días
+                      <span className="text-sm font-bold text-red-500">
+                        ${client.deuda.toLocaleString("es-CO")}
                       </span>
-                    </span>
-                    <span className="text-sm font-bold text-destructive">
-                      ${client.deuda.toLocaleString("es-CO")}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Top 5 Deudas Más Viejas */}
+          <Card className="shadow-sm flex flex-col h-full">
+            <Link href="/clientes?filter=top-viejas" className="hover:opacity-80 transition-opacity">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-destructive" />
+                  Top 5 Deudas Viejas
+                  <span className="ml-auto text-xs font-normal text-muted-foreground underline">Ver filtro &rarr;</span>
+                </CardTitle>
+              </CardHeader>
+            </Link>
+            <CardContent className="flex-1">
+              {topDeudasViejas.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No hay clientes con deudas viejas.</p>
+              ) : (
+                <div className="space-y-3">
+                  {topDeudasViejas.map((client, i) => (
+                    <Link
+                      key={client.id}
+                      href={`/clientes/${client.id}`}
+                      className="flex items-center justify-between group hover:bg-muted/50 rounded-md px-2 py-1.5 -mx-2 transition-colors"
+                    >
+                      <span className="flex flex-col">
+                        <span className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-muted-foreground w-5">
+                            {i + 1}.
+                          </span>
+                          <span className="text-sm font-medium group-hover:underline truncate max-w-[140px]">
+                            {client.nombre}
+                          </span>
+                        </span>
+                        <span className="text-[10px] text-muted-foreground ml-7">
+                          Hace {client.diasSinMovimiento} días
+                        </span>
+                      </span>
+                      <span className="text-sm font-bold text-destructive">
+                        ${client.deuda.toLocaleString("es-CO")}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Desglose Cartones */}
+          <Card className="shadow-sm h-full">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Package className="h-5 w-5 text-muted-foreground" />
+                Desglose (Este Mes)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {desgloseCartones.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No hay entregas registradas este mes.
+                </p>
+              ) : (
+                <div className="space-y-4">
+                  {desgloseCartones.map((item) => (
+                    <div key={item.tipo} className="flex items-center justify-between">
+                      <span className="font-medium text-sm">{ETIQUETAS_CARTON[item.tipo]}</span>
+                      <span className="font-bold">{item.cantidad}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </section>
     </div>
   );
 }
