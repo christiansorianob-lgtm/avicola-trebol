@@ -192,3 +192,41 @@ export async function obtenerDatosExportacionExcel() {
     return { success: false, error: "Error al obtener datos para exportar" };
   }
 }
+
+export async function obtenerInventarioDisponible() {
+  try {
+    const aggBajadas = await prisma.bajada.aggregate({
+      _sum: {
+        cartonesPequeno: true,
+        cartonesMediano: true,
+        cartonesGrande: true,
+        cartonesJumbo: true,
+      }
+    });
+
+    const aggMovimientos = await prisma.movimiento.groupBy({
+      by: ['tipoCarton'],
+      where: { tipo: "ENTREGA" },
+      _sum: {
+        cartones: true
+      }
+    });
+
+    const inventario = {
+      PEQUENO: aggBajadas._sum.cartonesPequeno || 0,
+      MEDIANO: aggBajadas._sum.cartonesMediano || 0,
+      GRANDE: aggBajadas._sum.cartonesGrande || 0,
+      JUMBO: aggBajadas._sum.cartonesJumbo || 0,
+    };
+
+    aggMovimientos.forEach(m => {
+      if (m.tipoCarton && m._sum.cartones) {
+        inventario[m.tipoCarton as keyof typeof inventario] -= m._sum.cartones;
+      }
+    });
+
+    return { success: true, inventario };
+  } catch (error) {
+    return { success: false, error: "Error al obtener inventario" };
+  }
+}

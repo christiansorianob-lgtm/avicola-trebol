@@ -19,6 +19,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { ETIQUETAS_CARTON, TipoCartonType } from "@/lib/config";
 import { cn } from "@/lib/utils";
+import { obtenerInventarioDisponible } from "@/app/actions";
 
 // ───── Trend indicator helper ─────
 function TrendBadge({ current, previous }: { current: number; previous: number }) {
@@ -77,9 +78,11 @@ export default async function DashboardPage() {
   let topDeudores: { id: string; nombre: string; deuda: number }[] = [];
   let topDeudasViejas: { id: string; nombre: string; deuda: number; diasSinMovimiento: number }[] = [];
 
+  let inventario: Record<TipoCartonType, number> = { PEQUENO: 0, MEDIANO: 0, GRANDE: 0, JUMBO: 0 };
+
   try {
     // ── Current-month aggregates ──
-    const [pagos, gastos, entregas] = await Promise.all([
+    const [pagos, gastos, entregas, inventarioData] = await Promise.all([
       prisma.movimiento.aggregate({
         where: { tipo: "PAGO", fecha: { gte: startOfMonth, lte: endOfMonth } },
         _sum: { monto: true },
@@ -92,10 +95,14 @@ export default async function DashboardPage() {
         where: { tipo: "ENTREGA", fecha: { gte: startOfMonth, lte: endOfMonth } },
         _sum: { cartones: true },
       }),
+      obtenerInventarioDisponible(),
     ]);
     ingresosMes = pagos._sum.monto || 0;
     gastosMes = gastos._sum.monto || 0;
     cartonesEntregados = entregas._sum.cartones || 0;
+    if (inventarioData.success && inventarioData.inventario) {
+      inventario = inventarioData.inventario as Record<TipoCartonType, number>;
+    }
 
     // ── Previous-month aggregates ──
     const [pagosPrev, gastosPrevQ, entregasPrev] = await Promise.all([
@@ -328,6 +335,26 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
         </Link>
+      </div>
+
+      {/* ── Inventario Section ── */}
+      <div className="grid gap-4 md:grid-cols-4">
+        {Object.entries(inventario).map(([tipo, cantidad]) => (
+          <Card key={tipo} className={cn("shadow-sm", cantidad < 0 && "border-destructive bg-destructive/5")}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Inventario {ETIQUETAS_CARTON[tipo as TipoCartonType]}</CardTitle>
+              <Package className={cn("h-4 w-4", cantidad < 0 ? "text-destructive" : "text-muted-foreground")} />
+            </CardHeader>
+            <CardContent>
+              <div className={cn("text-2xl font-bold", cantidad < 0 ? "text-destructive" : "")}>
+                {cantidad} {cantidad === 1 ? "cartón" : "cartones"}
+              </div>
+              {cantidad < 0 && (
+                <p className="text-xs text-destructive mt-1 font-medium">Inventario negativo</p>
+              )}
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {/* ── Second row: Desglose + Top Deudores ── */}

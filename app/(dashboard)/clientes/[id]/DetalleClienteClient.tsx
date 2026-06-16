@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, PlusCircle, Banknote, Calendar, Trash2, Edit, MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { registrarMovimiento, eliminarCliente, editarCliente, editarMovimiento, eliminarMovimiento } from "@/app/actions";
+import { registrarMovimiento, eliminarCliente, editarCliente, editarMovimiento, eliminarMovimiento, obtenerInventarioDisponible } from "@/app/actions";
 import { PRECIOS_CARTON, ETIQUETAS_CARTON, TipoCartonType } from "@/lib/config";
 import { TipoCarton } from "@prisma/client";
 import jsPDF from "jspdf";
@@ -115,6 +115,18 @@ export default function DetalleClienteClient({
   const [lastEntregaData, setLastEntregaData] = useState<{ cantidad: number, clasificacion: string, precioUnit: number, total: number, fecha: string, saldoTotal: number } | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  const [inventarioDisponible, setInventarioDisponible] = useState<Record<TipoCartonType, number> | null>(null);
+
+  useEffect(() => {
+    if (openEntrega) {
+      obtenerInventarioDisponible().then(res => {
+        if (res.success && res.inventario) {
+          setInventarioDisponible(res.inventario as Record<TipoCartonType, number>);
+        }
+      });
+    }
+  }, [openEntrega]);
 
   // Form Entrega
   const [fechaEntrega, setFechaEntrega] = useState(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
@@ -473,6 +485,11 @@ export default function DetalleClienteClient({
                   <Label>Precio por cartón ($)</Label>
                   <Input type="number" required value={precioUnit} onChange={e => setPrecioUnit(e.target.value)} min="1" />
                 </div>
+                {inventarioDisponible !== null && parseInt(cartones || "0") > inventarioDisponible[tipoCarton] && (
+                  <div className="p-3 bg-yellow-500/10 border border-yellow-500/50 rounded-md text-yellow-600 dark:text-yellow-500 text-sm font-medium">
+                    Atención: no hay suficiente inventario disponible. Actualmente tienes {inventarioDisponible[tipoCarton]} cartones {ETIQUETAS_CARTON[tipoCarton].toLowerCase()} en stock. Esta entrega dejará el inventario en {inventarioDisponible[tipoCarton] - parseInt(cartones || "0")} cartones.
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label>Notas (opcional)</Label>
                   <Input value={notasEntrega} onChange={e => setNotasEntrega(e.target.value)} />
