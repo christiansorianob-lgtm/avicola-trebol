@@ -180,19 +180,19 @@ export default function ProduccionClient({
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Pequeño (50-55gr)</Label>
+                    <Label>Pequeño</Label>
                     <Input type="number" value={cPequeno || ''} onChange={e => setCPequeno(parseInt(e.target.value) || 0)} min="0" />
                   </div>
                   <div className="space-y-2">
-                    <Label>Mediano (56-61gr)</Label>
+                    <Label>Mediano</Label>
                     <Input type="number" value={cMediano || ''} onChange={e => setCMediano(parseInt(e.target.value) || 0)} min="0" />
                   </div>
                   <div className="space-y-2">
-                    <Label>Grande (62-67gr)</Label>
+                    <Label>Grande</Label>
                     <Input type="number" value={cGrande || ''} onChange={e => setCGrande(parseInt(e.target.value) || 0)} min="0" />
                   </div>
                   <div className="space-y-2">
-                    <Label>Jumbo (68-90gr)</Label>
+                    <Label>Jumbo</Label>
                     <Input type="number" value={cJumbo || ''} onChange={e => setCJumbo(parseInt(e.target.value) || 0)} min="0" />
                   </div>
                 </div>
@@ -372,19 +372,19 @@ export default function ProduccionClient({
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Pequeño (50-55gr)</Label>
+                  <Label>Pequeño</Label>
                   <Input type="number" value={editCPequeno || ''} onChange={e => setEditCPequeno(parseInt(e.target.value) || 0)} min="0" />
                 </div>
                 <div className="space-y-2">
-                  <Label>Mediano (56-61gr)</Label>
+                  <Label>Mediano</Label>
                   <Input type="number" value={editCMediano || ''} onChange={e => setEditCMediano(parseInt(e.target.value) || 0)} min="0" />
                 </div>
                 <div className="space-y-2">
-                  <Label>Grande (62-67gr)</Label>
+                  <Label>Grande</Label>
                   <Input type="number" value={editCGrande || ''} onChange={e => setEditCGrande(parseInt(e.target.value) || 0)} min="0" />
                 </div>
                 <div className="space-y-2">
-                  <Label>Jumbo (68-90gr)</Label>
+                  <Label>Jumbo</Label>
                   <Input type="number" value={editCJumbo || ''} onChange={e => setEditCJumbo(parseInt(e.target.value) || 0)} min="0" />
                 </div>
               </div>
